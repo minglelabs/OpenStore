@@ -562,3 +562,7 @@ OpenStore should build a **marketplace-native global payments control plane** wi
 - a separate optional merchant-of-record lane only for first-party or temporary expansion use cases
 
 That architecture keeps OpenStore flexible enough to operate like an app store rather than a single-PSP subscription app.
+
+## Related Docs
+
+- [Implementation checklist](./IMPLEMENTATION-CHECKLIST.md)
