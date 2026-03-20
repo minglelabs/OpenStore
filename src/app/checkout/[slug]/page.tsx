@@ -76,7 +76,10 @@ export default async function CheckoutPage({
   const order = orderId
     ? await caller.store.checkout.orderById({ id: orderId }).catch(() => null)
     : null;
-  const pendingOrder = order?.id === orderId ? order : null;
+  const activeOrder =
+    order && order.id === orderId && order.app?.slug === slug ? order : null;
+  const pendingOrder =
+    activeOrder?.status === "PENDING_CONFIRMATION" ? activeOrder : null;
   const quoteError = quote && "error" in quote ? quote.error : null;
   const resolvedQuote = quote && !("error" in quote) ? quote : null;
 
@@ -299,6 +302,65 @@ export default async function CheckoutPage({
                   </SubmitButton>
                 </form>
               </div>
+            </section>
+          ) : activeOrder ? (
+            <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="rounded-[32px] border border-white/40 bg-white/75 p-6 shadow-[0_16px_40px_rgba(17,28,55,0.08)]">
+                <SectionHeading
+                  eyebrow="Order status"
+                  title="This checkout order is finalized"
+                  description="Terminal orders stay visible for audit, but they cannot be confirmed or canceled again."
+                />
+                <dl className="mt-6 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-[22px] bg-[var(--accent-soft)]/55 p-4">
+                    <dt className="text-sm text-[var(--ink-soft)]">Order ID</dt>
+                    <dd className="mt-2 text-sm font-semibold text-[var(--ink-strong)]">
+                      {activeOrder.id}
+                    </dd>
+                  </div>
+                  <div className="rounded-[22px] bg-[var(--accent-soft)]/55 p-4">
+                    <dt className="text-sm text-[var(--ink-soft)]">Status</dt>
+                    <dd className="mt-2 text-sm font-semibold text-[var(--ink-strong)]">
+                      {activeOrder.status}
+                    </dd>
+                  </div>
+                  <div className="rounded-[22px] bg-[var(--accent-soft)]/55 p-4">
+                    <dt className="text-sm text-[var(--ink-soft)]">Amount</dt>
+                    <dd className="mt-2 text-sm font-semibold text-[var(--ink-strong)]">
+                      {activeOrder.amountLabel}
+                    </dd>
+                  </div>
+                  <div className="rounded-[22px] bg-[var(--accent-soft)]/55 p-4">
+                    <dt className="text-sm text-[var(--ink-soft)]">Updated</dt>
+                    <dd className="mt-2 text-sm font-semibold text-[var(--ink-strong)]">
+                      {new Date(activeOrder.updatedAt).toLocaleString("en-US", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {resolvedQuote ? (
+                <form
+                  action={createCheckoutOrderAction}
+                  className="rounded-[32px] border border-white/40 bg-white/75 p-6 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+                >
+                  <SectionHeading
+                    eyebrow="Create another order"
+                    title="Open a fresh checkout session"
+                    description="Use a new order if you need to retry a canceled checkout or test another payment route."
+                  />
+                  <input name="appSlug" type="hidden" value={app.slug} />
+                  <input name="countryCode" type="hidden" value={countryCode} />
+                  <input name="currencyCode" type="hidden" value={currencyCode} />
+                  <input name="platform" type="hidden" value={requestedPlatform} />
+                  <SubmitButton className="mt-6" pendingLabel="Creating order...">
+                    Create new checkout order
+                  </SubmitButton>
+                </form>
+              ) : null}
             </section>
           ) : resolvedQuote ? (
             <form

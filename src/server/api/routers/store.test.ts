@@ -1,7 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { resetStoreServiceState } from "@/lib/store-service";
+import {
+  cancelCheckoutOrder,
+  confirmCheckoutOrder,
+  createCheckoutOrder,
+  getCheckoutQuoteForApp,
+  getDeveloperConsoleSnapshot,
+  resetStoreServiceState,
+} from "@/lib/store-service";
 import { appRouter } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
 
@@ -228,6 +235,67 @@ describe("storeRouter", () => {
     expect(markets.length).toBeGreaterThan(0);
     expect(quote.quote.paymentMethods).toContain("CARD");
     expect(summary.find((entry) => entry.developer.slug === "orbit-works")?.apps.length).toBeGreaterThan(0);
+  });
+
+  it("uses canonical regional pricing and counts subscription sales", () => {
+    const quote = getCheckoutQuoteForApp({
+      appSlug: "patchboard",
+      countryCode: "DE",
+      currencyCode: "EUR",
+      platform: "WEB",
+    });
+    const order = createCheckoutOrder({
+      appSlug: "beam-music",
+      countryCode: "DE",
+      currencyCode: "EUR",
+      platform: "WEB",
+    });
+
+    confirmCheckoutOrder({
+      id: order.id,
+      paymentMethod: "CARD",
+    });
+
+    const developerConsole = getDeveloperConsoleSnapshot();
+    const emberStudio = developerConsole.find(
+      (entry) => entry.developer.slug === "ember-studio",
+    );
+
+    expect(quote.amountValue).toBe(6.43);
+    expect(quote.amountLabel).toContain("6.43");
+    expect(quote.amountLabel).not.toContain("6.99");
+    expect(emberStudio?.sales.count).toBe(1);
+    expect(emberStudio?.sales.totalsByCurrency[0]?.amount).toBeGreaterThan(0);
+  });
+
+  it("rejects checkout mutations after an order reaches a terminal state", () => {
+    const canceledOrder = createCheckoutOrder({
+      appSlug: "patchboard",
+      countryCode: "US",
+      currencyCode: "USD",
+      platform: "WEB",
+    });
+    cancelCheckoutOrder(canceledOrder.id);
+
+    expect(() =>
+      confirmCheckoutOrder({
+        id: canceledOrder.id,
+        paymentMethod: "CARD",
+      }),
+    ).toThrow(/already CANCELED/);
+
+    const succeededOrder = createCheckoutOrder({
+      appSlug: "arcade-lane",
+      countryCode: "US",
+      currencyCode: "USD",
+      platform: "WEB",
+    });
+    confirmCheckoutOrder({
+      id: succeededOrder.id,
+      paymentMethod: "CARD",
+    });
+
+    expect(() => cancelCheckoutOrder(succeededOrder.id)).toThrow(/already SUCCEEDED/);
   });
 
   it("throws a not-found error for missing app slugs", async () => {

@@ -22,6 +22,12 @@ import {
   type ChartView,
 } from "@/lib/store-data";
 import {
+  formatCurrencyAmount,
+  getBillingModelForApp,
+  resolveAppPricing,
+  resolveStoredOrderAmount,
+} from "@/lib/store-pricing";
+import {
   createInitialStoreState,
   readStoreState,
   resetPersistentStoreState,
@@ -57,6 +63,7 @@ const baseReviewsByApp = Object.fromEntries(
   getAllApps().map((app) => [app.slug, structuredClone(app.reviews)]),
 ) as Record<string, ReviewRecord[]>;
 const initialSessionState = createInitialStoreState(baseReviewsByApp);
+type CheckoutOrderWithApp = CheckoutOrder & { amountValue: number; app: EnrichedApp };
 
 function getSessionState() {
   return readStoreState(initialSessionState);
@@ -197,14 +204,16 @@ function sortApps(apps: EnrichedApp[], sort: AppSort) {
   }
 }
 
-function matchesPricingFilter(priceLabel: string, pricing: PricingFilter) {
+function matchesPricingFilter(appSlug: string, pricing: PricingFilter) {
+  const billingModel = getBillingModelForApp(appSlug);
+
   switch (pricing) {
     case "free":
-      return priceLabel === "Free";
+      return billingModel === "FREE";
     case "paid":
-      return priceLabel.startsWith("$");
+      return billingModel === "ONE_TIME";
     case "subscription":
-      return !priceLabel.startsWith("$") && priceLabel !== "Free";
+      return billingModel === "SUBSCRIPTION";
     default:
       return true;
   }
@@ -228,35 +237,14 @@ function getUpdateItem(state: StoreSessionState, slug: string) {
   return state.updates.find((item) => item.slug === slug);
 }
 
-function parsePriceLabel(priceLabel: string) {
-  const numeric = Number(priceLabel.replace(/[^0-9.]/g, ""));
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
-}
-
-function formatCurrencyLabel(currencyCode: string, amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 function inferProductType(app: EnrichedApp): ProductType {
-  const normalized = app.priceLabel.toLowerCase();
-
-  if (
-    normalized.includes("trial") ||
-    normalized.includes("premium") ||
-    normalized.includes("pro")
-  ) {
-    return "AUTO_RENEWING_SUBSCRIPTION";
-  }
-
-  return "PAID_APP";
+  return getBillingModelForApp(app.slug) === "SUBSCRIPTION"
+    ? "AUTO_RENEWING_SUBSCRIPTION"
+    : "PAID_APP";
 }
 
 function requirePaidApp(app: EnrichedApp) {
-  if (app.priceLabel === "Free") {
+  if (getBillingModelForApp(app.slug) === "FREE") {
     throw new Error(`App ${app.slug} does not require checkout.`);
   }
 }
@@ -275,6 +263,24 @@ function attachDeveloperReport(state: StoreSessionState, report: DeveloperReport
   };
 }
 
+function getOrderPricingSnapshot(order: CheckoutOrder) {
+  const resolvedAmount = resolveStoredOrderAmount(order);
+
+  if (typeof order.amountValue === "number" && Number.isFinite(order.amountValue)) {
+    return {
+      amountValue: order.amountValue,
+      amountLabel: order.amountLabel,
+    };
+  }
+
+  const canonicalPricing = resolveAppPricing(order.appSlug, order.currencyCode);
+
+  return {
+    amountValue: resolvedAmount,
+    amountLabel: canonicalPricing?.amountLabel ?? order.amountLabel,
+  };
+}
+
 function buildDeveloperSalesSnapshot(
   orders: CheckoutOrder[],
   developerSlug: string,
@@ -287,9 +293,10 @@ function buildDeveloperSalesSnapshot(
   const totals = new Map<string, number>();
 
   for (const order of filtered) {
+    const { amountValue } = getOrderPricingSnapshot(order);
     totals.set(
       order.currencyCode,
-      (totals.get(order.currencyCode) ?? 0) + parsePriceLabel(order.amountLabel),
+      (totals.get(order.currencyCode) ?? 0) + amountValue,
     );
   }
 
@@ -298,7 +305,7 @@ function buildDeveloperSalesSnapshot(
     totalsByCurrency: [...totals.entries()].map(([currencyCode, amount]) => ({
       currencyCode,
       amount: Number(amount.toFixed(2)),
-      label: formatCurrencyLabel(currencyCode, amount),
+      label: formatCurrencyAmount(currencyCode, amount),
     })),
     orders: filtered.sort(
       (left, right) =>
@@ -348,7 +355,7 @@ export function listApps(input?: {
         return false;
       }
 
-      if (!matchesPricingFilter(app.priceLabel, input?.pricing ?? "any")) {
+      if (!matchesPricingFilter(app.slug, input?.pricing ?? "any")) {
         return false;
       }
 
@@ -958,6 +965,12 @@ export function getCheckoutQuoteForApp(input: {
   requirePaidApp(app);
 
   const productType = inferProductType(app);
+  const pricing = resolveAppPricing(app.slug, input.currencyCode);
+
+  if (!pricing) {
+    throw new Error(`Canonical pricing is missing for app ${app.slug}`);
+  }
+
   const quote = resolveCheckoutQuote({
     countryCode: input.countryCode,
     currencyCode: input.currencyCode,
@@ -971,9 +984,8 @@ export function getCheckoutQuoteForApp(input: {
     app,
     productType,
     quote,
-    amountLabel: app.priceLabel.startsWith("$")
-      ? formatCurrencyLabel(input.currencyCode, parsePriceLabel(app.priceLabel))
-      : `${formatCurrencyLabel(input.currencyCode, 0)} + subscription billing`,
+    amountValue: pricing.amountValue,
+    amountLabel: pricing.amountLabel,
   };
 }
 
@@ -1015,6 +1027,7 @@ export function createCheckoutOrder(input: {
       developerContractVersion: blueprint.quote.developerContractVersion,
       paymentMethods: blueprint.quote.paymentMethods,
       selectedPaymentMethod: blueprint.quote.paymentMethods[0],
+      amountValue: preview.amountValue,
       amountLabel: preview.amountLabel,
       warnings: blueprint.quote.warnings,
       status: "PENDING_CONFIRMATION",
@@ -1041,8 +1054,11 @@ export function getCheckoutOrderById(id: string) {
     return null;
   }
 
+  const pricing = getOrderPricingSnapshot(order);
+
   return {
     ...order,
+    ...pricing,
     app: getHydratedAppOrNull(state, order.appSlug),
   };
 }
@@ -1051,11 +1067,16 @@ export function listCheckoutOrders() {
   const state = getSessionState();
 
   return state.checkoutOrders
-    .map((order) => ({
-      ...order,
-      app: getHydratedAppOrNull(state, order.appSlug),
-    }))
-    .filter((order): order is CheckoutOrder & { app: EnrichedApp } => Boolean(order.app))
+    .map((order) => {
+      const pricing = getOrderPricingSnapshot(order);
+
+      return {
+        ...order,
+        ...pricing,
+        app: getHydratedAppOrNull(state, order.appSlug),
+      };
+    })
+    .filter((order): order is CheckoutOrderWithApp => Boolean(order.app))
     .sort(
       (left, right) =>
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -1073,7 +1094,19 @@ export function confirmCheckoutOrder(input: {
       throw new Error(`Checkout order not found for id ${input.id}`);
     }
 
-    if (input.paymentMethod && order.paymentMethods.includes(input.paymentMethod)) {
+    if (order.status !== "PENDING_CONFIRMATION") {
+      throw new Error(
+        `Cannot confirm checkout order ${order.id} because it is already ${order.status}.`,
+      );
+    }
+
+    if (input.paymentMethod && !order.paymentMethods.includes(input.paymentMethod)) {
+      throw new Error(
+        `Payment method ${input.paymentMethod} is not available for checkout order ${order.id}.`,
+      );
+    }
+
+    if (input.paymentMethod) {
       order.selectedPaymentMethod = input.paymentMethod;
     }
 
@@ -1121,6 +1154,12 @@ export function cancelCheckoutOrder(id: string) {
       throw new Error(`Checkout order not found for id ${id}`);
     }
 
+    if (order.status !== "PENDING_CONFIRMATION") {
+      throw new Error(
+        `Cannot cancel checkout order ${order.id} because it is already ${order.status}.`,
+      );
+    }
+
     order.status = "CANCELED";
     order.updatedAt = new Date().toISOString();
     pushActivity(state, "Checkout canceled", `Canceled checkout for ${order.appSlug}.`);
@@ -1162,10 +1201,11 @@ export function getOperationsDashboard() {
 
 export function getDeveloperConsoleSnapshot() {
   const state = getSessionState();
+  const allApps = getHydratedApps(state);
   const checkoutOrders = state.checkoutOrders;
 
   return getAllDevelopers().map((developer) => {
-    const apps = listApps({ developerSlug: developer.slug });
+    const apps = allApps.filter((app) => app.developer.slug === developer.slug);
     const openAppReports = state.appReports.filter(
       (report) =>
         report.status === "OPEN" &&
@@ -1180,12 +1220,9 @@ export function getDeveloperConsoleSnapshot() {
       developer,
       apps,
       monetization: {
-        paidApps: apps.filter((app) => app.priceLabel.startsWith("$")).length,
-        subscriptionApps: apps.filter((app) =>
-          ["premium", "pro", "trial"].some((term) =>
-            app.priceLabel.toLowerCase().includes(term),
-          ),
-        ).length,
+        paidApps: apps.filter((app) => getBillingModelForApp(app.slug) === "ONE_TIME").length,
+        subscriptionApps: apps.filter((app) => getBillingModelForApp(app.slug) === "SUBSCRIPTION")
+          .length,
       },
       inbox: {
         openAppReports,

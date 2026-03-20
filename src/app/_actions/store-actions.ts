@@ -210,7 +210,7 @@ export async function reportAppAction(formData: FormData) {
   const values = parseFormData(formData, appReportSchema);
   reportApp(values);
   const target = safePath(values.returnPath, `/apps/${values.appSlug}`);
-  revalidateStorePaths([target, "/ops-console"]);
+  revalidateStorePaths([target, "/ops-console", "/developer-console"]);
   redirect(target);
 }
 
@@ -218,7 +218,7 @@ export async function reportDeveloperAction(formData: FormData) {
   const values = parseFormData(formData, developerReportSchema);
   reportDeveloper(values);
   const target = safePath(values.returnPath, `/developers/${values.developerSlug}`);
-  revalidateStorePaths([target, "/ops-console"]);
+  revalidateStorePaths([target, "/ops-console", "/developer-console"]);
   redirect(target);
 }
 
@@ -236,7 +236,9 @@ export async function createCheckoutOrderAction(formData: FormData) {
     "/ops-console",
     "/developer-console",
   ]);
-  redirect(`/checkout/${values.appSlug}?order=${order.id}`);
+  redirect(
+    `/checkout/${values.appSlug}?countryCode=${values.countryCode}&currencyCode=${values.currencyCode}&platform=${values.platform}&order=${order.id}`,
+  );
 }
 
 export async function confirmCheckoutOrderAction(formData: FormData) {
@@ -266,7 +268,7 @@ export async function resolveAppReportAction(formData: FormData) {
   const values = parseFormData(formData, resolveReportSchema);
   resolveAppReport(values.id, values.resolutionNote);
   const target = safePath(values.returnPath, "/ops-console");
-  revalidateStorePaths([target, "/ops-console"]);
+  revalidateStorePaths([target, "/ops-console", "/developer-console"]);
   redirect(target);
 }
 
@@ -274,6 +276,6 @@ export async function resolveDeveloperReportAction(formData: FormData) {
   const values = parseFormData(formData, resolveReportSchema);
   resolveDeveloperReport(values.id, values.resolutionNote);
   const target = safePath(values.returnPath, "/ops-console");
-  revalidateStorePaths([target, "/ops-console"]);
+  revalidateStorePaths([target, "/ops-console", "/developer-console"]);
   redirect(target);
 }

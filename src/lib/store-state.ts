@@ -81,6 +81,7 @@ export type CheckoutOrder = {
   developerContractVersion: string;
   paymentMethods: PaymentMethodType[];
   selectedPaymentMethod: PaymentMethodType;
+  amountValue?: number;
   amountLabel: string;
   warnings: string[];
   status: CheckoutOrderStatus;
@@ -112,6 +113,12 @@ const defaultStateFile =
   (process.env.NODE_ENV === "test"
     ? path.join(os.tmpdir(), "openstore-state.json")
     : path.join(/* turbopackIgnore: true */ process.cwd(), ".openstore", "state.json"));
+const backupStateFile = `${defaultStateFile}.bak`;
+const stateLockFile = `${defaultStateFile}.lock`;
+const lockSleepState = new Int32Array(new SharedArrayBuffer(4));
+const lockWaitMs = 25;
+const lockTimeoutMs = 5_000;
+const staleLockMs = 15_000;
 
 export function createInitialStoreState(
   reviewsByApp: Record<string, ReviewRecord[]>,
@@ -172,41 +179,176 @@ function ensureStateFile(initialState: StoreSessionState) {
   const stateDir = path.dirname(defaultStateFile);
   fs.mkdirSync(stateDir, { recursive: true });
 
-  if (!fs.existsSync(defaultStateFile)) {
-    fs.writeFileSync(defaultStateFile, JSON.stringify(initialState, null, 2));
+  if (!fs.existsSync(defaultStateFile) && !fs.existsSync(backupStateFile)) {
+    persistStateSnapshot(initialState);
   }
 }
 
-export function readStoreState(initialState: StoreSessionState) {
-  ensureStateFile(initialState);
+function isStateSnapshot(value: unknown): value is StoreSessionState {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "version" in value &&
+      (value as StoreSessionState).version === 1,
+  );
+}
+
+function loadStateSnapshot(filePath: string) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
 
   try {
-    const raw = fs.readFileSync(defaultStateFile, "utf8");
-    const parsed = JSON.parse(raw) as StoreSessionState;
+    const raw = fs.readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
 
-    if (parsed.version !== 1) {
+    if (!isStateSnapshot(parsed)) {
       throw new Error("Unsupported store state version.");
     }
 
     return parsed;
   } catch {
-    fs.writeFileSync(defaultStateFile, JSON.stringify(initialState, null, 2));
-    return structuredClone(initialState);
+    return null;
   }
+}
+
+function atomicWriteFile(targetFile: string, contents: string) {
+  const tempFile = `${targetFile}.${process.pid}.${Date.now()}.tmp`;
+  let fileHandle: number | null = null;
+
+  try {
+    fileHandle = fs.openSync(tempFile, "w");
+    fs.writeFileSync(fileHandle, contents, "utf8");
+    fs.fsyncSync(fileHandle);
+    fs.closeSync(fileHandle);
+    fileHandle = null;
+    fs.renameSync(tempFile, targetFile);
+  } catch (error) {
+    if (fileHandle !== null) {
+      fs.closeSync(fileHandle);
+    }
+
+    if (fs.existsSync(tempFile)) {
+      fs.unlinkSync(tempFile);
+    }
+
+    throw error;
+  }
+}
+
+function persistStateSnapshot(state: StoreSessionState) {
+  const payload = JSON.stringify(state, null, 2);
+  atomicWriteFile(defaultStateFile, payload);
+  atomicWriteFile(backupStateFile, payload);
+}
+
+function waitForLock() {
+  Atomics.wait(lockSleepState, 0, 0, lockWaitMs);
+}
+
+function releaseStateLock(lockHandle: number) {
+  fs.closeSync(lockHandle);
+
+  try {
+    fs.unlinkSync(stateLockFile);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+function acquireStateLock() {
+  const deadline = Date.now() + lockTimeoutMs;
+  fs.mkdirSync(path.dirname(defaultStateFile), { recursive: true });
+
+  while (Date.now() < deadline) {
+    try {
+      const lockHandle = fs.openSync(stateLockFile, "wx");
+      fs.writeFileSync(lockHandle, String(process.pid));
+      return lockHandle;
+    } catch (error) {
+      const lockError = error as NodeJS.ErrnoException;
+
+      if (lockError.code !== "EEXIST") {
+        throw error;
+      }
+
+      try {
+        const stats = fs.statSync(stateLockFile);
+
+        if (Date.now() - stats.mtimeMs > staleLockMs) {
+          fs.unlinkSync(stateLockFile);
+          continue;
+        }
+      } catch (statError) {
+        if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
+          throw statError;
+        }
+      }
+
+      waitForLock();
+    }
+  }
+
+  throw new Error("Timed out while waiting for the persistent store state lock.");
+}
+
+function withStateLock<T>(callback: () => T) {
+  const lockHandle = acquireStateLock();
+
+  try {
+    return callback();
+  } finally {
+    releaseStateLock(lockHandle);
+  }
+}
+
+function readStoreStateSnapshot(initialState: StoreSessionState) {
+  ensureStateFile(initialState);
+
+  const primaryState = loadStateSnapshot(defaultStateFile);
+
+  if (primaryState) {
+    return primaryState;
+  }
+
+  const backupState = loadStateSnapshot(backupStateFile);
+
+  if (backupState) {
+    persistStateSnapshot(backupState);
+    return backupState;
+  }
+
+  const fallbackState = structuredClone(initialState);
+  persistStateSnapshot(fallbackState);
+  return fallbackState;
+}
+
+export function readStoreState(initialState: StoreSessionState) {
+  return readStoreStateSnapshot(initialState);
 }
 
 export function updateStoreState<T>(
   initialState: StoreSessionState,
   updater: (state: StoreSessionState) => T,
 ) {
-  const state = readStoreState(initialState);
-  const result = updater(state);
-  fs.writeFileSync(defaultStateFile, JSON.stringify(state, null, 2));
-  return result;
+  return withStateLock(() => {
+    const state = readStoreStateSnapshot(initialState);
+    const result = updater(state);
+    persistStateSnapshot(state);
+    return result;
+  });
 }
 
 export function resetPersistentStoreState(initialState: StoreSessionState) {
-  const stateDir = path.dirname(defaultStateFile);
-  fs.mkdirSync(stateDir, { recursive: true });
-  fs.writeFileSync(defaultStateFile, JSON.stringify(initialState, null, 2));
+  withStateLock(() => {
+    const stateDir = path.dirname(defaultStateFile);
+    fs.mkdirSync(stateDir, { recursive: true });
+    persistStateSnapshot(initialState);
+  });
+}
+
+export function getPersistentStoreStateFilePath() {
+  return defaultStateFile;
 }
