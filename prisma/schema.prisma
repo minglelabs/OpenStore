@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Developer {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  headline     String
+  description  String
+  website      String?
+  verified     Boolean  @default(false)
+  region       String
+  supportEmail String?
+  apps         App[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  summary     String
+  apps        App[]
+  collections Collection[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model App {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String
+  tagline         String
+  summary         String
+  description     String
+  priceLabel      String
+  ratingAverage   Float            @default(0)
+  ratingCount     Int              @default(0)
+  downloadCount   Int              @default(0)
+  ageRating       String
+  sizeLabel       String
+  developerId     String
+  categoryId      String
+  developer       Developer        @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  versions        AppVersion[]
+  collectionItems CollectionItem[]
+  reviews         Review[]
+  libraryEntries  LibraryEntry[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model AppVersion {
+  id           String   @id @default(cuid())
+  appId        String
+  version      String
+  releaseNotes String
+  releasedAt   DateTime
+  app          App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@index([appId, releasedAt])
+}
+
+model Collection {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String
+  curator     String
+  categoryId  String?
+  category    Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  items       CollectionItem[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  appId        String
+  position     Int
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  app          App        @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, appId])
+  @@unique([collectionId, position])
+}
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique
+  name           String
+  region         String
+  libraryEntries LibraryEntry[]
+  devices        Device[]
+  reviews        Review[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model LibraryEntry {
+  id        String        @id @default(cuid())
+  userId    String
+  appId     String
+  status    LibraryStatus
+  version   String?
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app       App           @relation(fields: [appId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([userId, appId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  appId       String
+  userId      String
+  title       String
+  body        String
+  rating      Int
+  submittedAt DateTime @default(now())
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, submittedAt])
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  platform   String
+  trusted    Boolean  @default(false)
+  lastSeenAt DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum LibraryStatus {
+  INSTALLED
+  UPDATE_AVAILABLE
+  QUEUED
+  WISHLISTED
+}
