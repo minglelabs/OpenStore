@@ -24,6 +24,8 @@ This directory contains working legal-preparation drafts for OpenStore. These do
    Use when a live Apple dispute may justify escalation in Japan, the EU, the UK, Canada, APAC, the Gulf, or other non-U.S. jurisdictions.
 10. `templates/jurisdiction-tracker.csv`
    Track which jurisdictions have real nexus facts, a verified filing path, and local-counsel confirmation.
+11. `policies/`
+   Draft privacy-policy and terms-of-service materials, including an English source, translations, and a publication intake file.
 
 ## Current Posture Locked by the Repository
 
