@@ -14,6 +14,7 @@ This repository is intended to become a full marketplace product, not only a vis
 ## Architecture Docs
 
 - [Global in-app purchase and subscription architecture](docs/architecture/global-payments/README.md)
+- [Global payments implementation checklist](docs/architecture/global-payments/IMPLEMENTATION-CHECKLIST.md)
 
 ## Repository Language Policy
 
