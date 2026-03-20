@@ -1,0 +1,18 @@
+jurisdiction,authority,official_path,status,language_or_localisation,openstore_nexus_needed,primary_hook,next_step
+Korea,KFTC,https://case.ftc.go.kr/main.do,ready_template_exists,Korean,Korean complainant or Korean market harm,abuse_of_dominance_or_unfair_trade,complete_korean_pack
+Japan,JFTC,https://www.jftc.go.jp/soudan/madoguchi/shinkoku.html,official_path_verified,Japanese,Japan developer or user or launch nexus,antimonopoly_act,prepare_japanese_summary
+European Union,European Commission DG Competition,https://competition-policy.ec.europa.eu/antitrust-and-cartels/procedures/complaints_en,official_path_verified,EU procedural language,EU multi-state nexus or gatekeeper issue,articles_101_102_or_dma,decide_ec_vs_nca
+United Kingdom,CMA,https://www.gov.uk/guidance/tell-the-cma-about-a-competition-or-market-problem,official_path_verified,English,UK business or user nexus,competition_act_or_dmcc,prepare_uk_nexus_memo
+Canada,Competition Bureau Canada,https://competition-bureau.canada.ca/en/how-we-foster-competition/compliance-and-enforcement/share-information-competition-bureau,official_path_verified,English_or_French,Canada business or user nexus,abuse_of_dominance_or_other_conduct,decide_bureau_vs_private_access
+New Zealand,Commerce Commission,https://www.comcom.govt.nz/report-a-concern,official_path_verified,English,New_Zealand nexus,commerce_act,prepare_nz_concern_form
+Australia,ACCC,https://www.accc.gov.au/contact-us,official_path_verified,English,Australia nexus,cca_2010_and_digital_platform_harms,prepare_accc_issue_summary
+Iceland,Icelandic Competition Authority,https://en.samkeppni.is/competition-rules/inquiries-and-complaints/,verify_with_local_counsel,Icelandic_or_English_support,Iceland nexus,competition_act_or_eea_style_dominance,reconfirm_live_english_or_icelandic_route
+China,SAMR,https://www.samr.gov.cn/hd/index.html,official_path_verified_for_channel,Chinese,China market nexus,anti_monopoly_law,confirm_12315_and_local_counsel
+India,CCI,https://www.cci.gov.in/filing/atd,official_path_verified,English,India market nexus,section_19_1_a_information,prepare_format_1_and_fee_band
+United Arab Emirates,Ministry of Economy & Tourism,https://www.moec.gov.ae/en/web/guest/competition-complaints,official_path_verified,Arabic_or_English_support,UAE nexus,decree_law_36_2023,complete_complaint_guidelines_check
+Saudi Arabia,GAC,https://eservicesuat.gac.gov.sa/,official_path_verified,Arabic,Saudi nexus,competition_law_complaint,confirm_live_service_access
+Vietnam,Vietnam Competition Commission,https://en.vcc.gov.vn/,official_path_verified_for_authority,Vietnamese,Vietnam nexus,competition_case_dossier,confirm_live_submission_channel
+Thailand,TCCT,https://www.tcct.or.th/,verify_with_local_counsel,Thai,Thailand nexus,trade_competition_act,confirm_live_complaint_route
+Indonesia,KPPU,https://kppu.go.id/kontak/,official_path_verified,Bahasa_Indonesia,Indonesia nexus,law_5_1999,prepare_indonesian_report
+Philippines,PCC,https://www.phcc.gov.ph/enforcement/file-a-complaint,official_path_verified,English,Philippines nexus,pca_complaint_or_ecomplaint,decide_verified_vs_ecomplaint
+Russia,FAS,https://fas.gov.ru,verify_with_local_counsel,Russian,Russia nexus,antimonopoly_theory_to_be_localised,confirm_live_intake_route

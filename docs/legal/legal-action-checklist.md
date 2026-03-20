@@ -12,9 +12,11 @@ Use these documents together instead of treating this checklist as a standalone 
 - `send-readiness-checklist.md`
 - `openstore-apple-demand-letter.md`
 - `openstore-kftc-complaint-pack.md`
+- `multi-jurisdiction-competition-pack.md`
 - `templates/submission-timeline.csv`
 - `templates/evidence-index.csv`
 - `templates/harm-log.csv`
+- `templates/jurisdiction-tracker.csv`
 
 ## Objective
 
@@ -215,4 +217,5 @@ Escalate to formal legal action immediately if any of the following occur:
 - The packet now has an explicit send and filing gate in `send-readiness-checklist.md`.
 - The Apple notice concept now has an OpenStore-specific working draft in `openstore-apple-demand-letter.md`.
 - The Korea Fair Trade Commission preparation work now has a filing packet starter in `openstore-kftc-complaint-pack.md`.
+- The packet now has a multi-jurisdiction escalation guide in `multi-jurisdiction-competition-pack.md`.
 - Evidence, submission chronology, and harm tracking now have CSV templates in `templates/`.

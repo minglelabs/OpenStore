@@ -20,6 +20,10 @@ This directory contains working legal-preparation drafts for OpenStore. These do
    Use for a pre-dispute notice, post-rejection notice, or preservation demand to Apple.
 8. `openstore-kftc-complaint-pack.md`
    Use as the English source packet for a Korea Fair Trade Commission filing, then translate the final complaint and exhibits into Korean before submission.
+9. `multi-jurisdiction-competition-pack.md`
+   Use when a live Apple dispute may justify escalation in Japan, the EU, the UK, Canada, APAC, the Gulf, or other non-U.S. jurisdictions.
+10. `templates/jurisdiction-tracker.csv`
+   Track which jurisdictions have real nexus facts, a verified filing path, and local-counsel confirmation.
 
 ## Current Posture Locked by the Repository
 
@@ -63,3 +67,8 @@ Before external use, complete both:
 
 - `templates/legal-intake.yaml`
 - `send-readiness-checklist.md`
+
+If any non-U.S. or non-Korea escalation is being considered, also complete:
+
+- `multi-jurisdiction-competition-pack.md`
+- `templates/jurisdiction-tracker.csv`

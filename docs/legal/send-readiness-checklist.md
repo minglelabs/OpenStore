@@ -38,6 +38,17 @@ Mark each item:
 - `[ ]` Signer authority and filing responsibility are confirmed.
 - `[ ]` The online filing path is confirmed as `사건신고` unless counsel directs otherwise.
 
+## Other Jurisdictions Readiness
+
+Before any filing outside the U.S. and Korea:
+
+- `[ ]` A row exists for the jurisdiction in `templates/jurisdiction-tracker.csv`.
+- `[ ]` The jurisdiction status is not `verify_with_local_counsel`, unless local counsel has now confirmed the route and the tracker has been updated.
+- `[ ]` Jurisdiction-specific nexus facts are written down in the tracker or intake record.
+- `[ ]` The official authority path in `multi-jurisdiction-competition-pack.md` has been re-opened and re-checked on the filing date.
+- `[ ]` Language, translation, notarisation, and representative requirements for that jurisdiction are confirmed.
+- `[ ]` Any local deadlines, fee requirements, or form requirements are copied into the working filing checklist.
+
 ## Blockers That Must Stay Explicit
 
 If any item below is still missing, keep it explicitly marked as missing in the intake file and do not imply it elsewhere:
@@ -48,6 +59,7 @@ If any item below is still missing, keep it explicitly marked as missing in the 
 - Bundle ID or build number
 - Korean complainant entity
 - Quantified damages or harm figures
+- A verified filing path for any additional jurisdiction
 
 ## Minimum Review Trail
 
