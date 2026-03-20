@@ -4,6 +4,10 @@
 
 This checklist turns the global payments architecture into an execution backlog for OpenStore.
 
+Related status:
+
+- [Repository execution status](./EXECUTION-STATUS.md)
+
 ## 1. Business and Legal Foundations
 
 - Define the initial launch countries and supported currencies.
