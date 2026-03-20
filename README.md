@@ -11,6 +11,10 @@ This repository is intended to become a full marketplace product, not only a vis
 - A developer console
 - An internal operations and moderation console
 
+## Architecture Docs
+
+- [Global in-app purchase and subscription architecture](docs/architecture/global-payments/README.md)
+
 ## Repository Language Policy
 
 Everything in this repository must be written in English:
