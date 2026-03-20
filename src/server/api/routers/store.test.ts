@@ -70,11 +70,17 @@ describe("storeRouter", () => {
     const caller = createCaller();
     const charts = await caller.store.charts({
       view: "free",
+      timeframe: "weekly",
       categorySlug: "productivity",
     });
 
-    expect(charts[0]?.slug).toBe("northstar-notes");
-    expect(charts.every((app) => app.category.slug === "productivity")).toBe(true);
+    expect(charts.label).toBe("Top Free");
+    expect(charts.entries[0]?.app.slug).toBe("northstar-notes");
+    expect(charts.entries[0]?.rank).toBe(1);
+    expect(charts.entries.every((entry) => entry.app.category.slug === "productivity")).toBe(
+      true,
+    );
+    expect(charts.featureChecklist).toContain("Editorial override labels with visible reasons");
   });
 
   it("returns search results, suggestions, trending queries, and recent queries", async () => {

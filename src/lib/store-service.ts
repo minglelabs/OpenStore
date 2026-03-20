@@ -12,17 +12,22 @@ import {
   getAccountSnapshot,
   getAllApps,
   getAllCategories,
+  getChartEntries,
+  getChartFeatureChecklist,
+  getChartViewDefinition,
   getAllCollections,
   getAllDevelopers,
   getAppBySlug,
   getCategoryBySlug,
-  getCharts,
   getCollectionBySlug,
   getDeveloperBySlug,
   getDiscoverFeed,
   getLibrarySnapshot,
   getTodayFeed,
   searchStore,
+  type ChartMovementDirection,
+  type ChartEntrySeed,
+  type ChartTimeframe,
   type ChartView,
 } from "@/lib/store-data";
 import { averageProgress } from "@/lib/utils";
@@ -31,6 +36,43 @@ export type AppStatus = EnrichedApp["status"];
 export type PricingFilter = "any" | "free" | "paid" | "subscription";
 export type AppSort = "featured" | "rating" | "downloads" | "recent";
 export type SearchSort = "relevance" | "rating" | "downloads" | "recent";
+export type ChartEntry = {
+  app: EnrichedApp;
+  rank: number;
+  previousRank: number | null;
+  movement: number;
+  movementDirection: ChartMovementDirection;
+  highlight: string;
+  editorialBadge?: string;
+  editorialReason?: string;
+};
+
+export type ChartsSnapshot = {
+  view: ChartView;
+  timeframe: ChartTimeframe;
+  label: string;
+  title: string;
+  description: string;
+  updatedAt: string;
+  rankingHealth: string;
+  methodology: string[];
+  featureChecklist: string[];
+  stats: {
+    totalApps: number;
+    editorialOverrides: number;
+    categoryLabel: string | null;
+    biggestMover:
+      | {
+          slug: string;
+          name: string;
+          movement: number;
+          direction: ChartMovementDirection;
+        }
+      | null;
+  };
+  entries: ChartEntry[];
+};
+
 export type QueueRuntimeItem = {
   slug: string;
   progress: number;
@@ -231,6 +273,85 @@ function getHydratedApps() {
   return getAllApps().map(hydrateApp);
 }
 
+function getChartMovementDirection(
+  currentRank: number,
+  previousRank: number | null,
+): ChartMovementDirection {
+  if (previousRank === null) {
+    return "new";
+  }
+
+  if (previousRank > currentRank) {
+    return "up";
+  }
+
+  if (previousRank < currentRank) {
+    return "down";
+  }
+
+  return "flat";
+}
+
+function buildChartEntries(
+  seeds: ChartEntrySeed[],
+  categorySlug?: string,
+): ChartEntry[] {
+  const hydrated = seeds
+    .map((seed) => {
+      const app = getHydratedAppOrNull(seed.slug);
+
+      if (!app) {
+        return null;
+      }
+
+      return {
+        app,
+        seed,
+      };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is {
+        app: EnrichedApp;
+        seed: ChartEntrySeed;
+      } => Boolean(entry),
+    )
+    .filter((entry) => !categorySlug || entry.app.category.slug === categorySlug)
+    .sort((left, right) => left.seed.rank - right.seed.rank);
+
+  const previousRankBySlug = new Map(
+    hydrated
+      .filter((entry) => entry.seed.previousRank !== null)
+      .sort(
+        (left, right) =>
+          (left.seed.previousRank ?? Number.POSITIVE_INFINITY) -
+          (right.seed.previousRank ?? Number.POSITIVE_INFINITY),
+      )
+      .map((entry, index) => [entry.app.slug, index + 1]),
+  );
+
+  return hydrated.map(({ app, seed }, index) => {
+    const rank = categorySlug ? index + 1 : seed.rank;
+    const previousRank = categorySlug
+      ? (previousRankBySlug.get(app.slug) ?? null)
+      : seed.previousRank;
+    const movement =
+      previousRank === null ? 0 : Math.abs(previousRank - rank);
+
+    return {
+      app,
+      rank,
+      previousRank,
+      movement,
+      movementDirection: getChartMovementDirection(rank, previousRank),
+      highlight: seed.highlight,
+      editorialBadge: seed.editorialBadge,
+      editorialReason: seed.editorialReason,
+    };
+  });
+}
+
 export function resetStoreServiceState() {
   sessionState = createInitialSessionState();
 }
@@ -334,16 +455,50 @@ export function getDiscoverFeedSnapshot() {
 
 export function getChartsSnapshot(input: {
   view: ChartView;
+  timeframe: ChartTimeframe;
   categorySlug?: string;
   limit?: number;
-}) {
-  const ranked = getCharts(input.view)
-    .map(hydrateApp)
-    .filter(
-      (app) => !input.categorySlug || app.category.slug === input.categorySlug,
-    );
+}): ChartsSnapshot {
+  const definition = getChartViewDefinition(input.view);
+  const category = input.categorySlug
+    ? getCategoryBySlug(input.categorySlug)
+    : null;
+  const entries = buildChartEntries(
+    getChartEntries(input.view, input.timeframe),
+    input.categorySlug,
+  );
+  const limitedEntries =
+    typeof input.limit === "number" ? entries.slice(0, input.limit) : entries;
+  const biggestMover =
+    limitedEntries
+      .filter((entry) => entry.movementDirection === "up" && entry.movement > 0)
+      .sort((left, right) => right.movement - left.movement)[0] ?? null;
 
-  return typeof input.limit === "number" ? ranked.slice(0, input.limit) : ranked;
+  return {
+    view: input.view,
+    timeframe: input.timeframe,
+    label: definition.label,
+    title: definition.title,
+    description: definition.description,
+    updatedAt: definition.updatedAt[input.timeframe],
+    rankingHealth: definition.rankingHealth,
+    methodology: definition.methodology,
+    featureChecklist: getChartFeatureChecklist(),
+    stats: {
+      totalApps: entries.length,
+      editorialOverrides: limitedEntries.filter((entry) => entry.editorialBadge).length,
+      categoryLabel: category?.name ?? null,
+      biggestMover: biggestMover
+        ? {
+            slug: biggestMover.app.slug,
+            name: biggestMover.app.name,
+            movement: biggestMover.movement,
+            direction: biggestMover.movementDirection,
+          }
+        : null,
+    },
+    entries: limitedEntries,
+  };
 }
 
 export function getSearchSnapshot(input: {
