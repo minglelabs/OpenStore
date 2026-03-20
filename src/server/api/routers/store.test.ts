@@ -176,7 +176,58 @@ describe("storeRouter", () => {
 
     expect(reviews[0]?.author).toBe("Taylor Park");
     expect(appReport.id).toMatch(/^app-report-/);
+    expect(appReport.status).toBe("OPEN");
     expect(developerReport.id).toMatch(/^developer-report-/);
+    expect(developerReport.status).toBe("OPEN");
+  });
+
+  it("creates checkout orders and resolves app reports through ops APIs", async () => {
+    const caller = createCaller();
+
+    const order = await caller.store.checkout.create({
+      appSlug: "patchboard",
+      countryCode: "US",
+      currencyCode: "USD",
+      platform: "WEB",
+    });
+    const confirmed = await caller.store.checkout.confirm({
+      id: order.id,
+      paymentMethod: "CARD",
+    });
+    const report = await caller.store.reports.app({
+      appSlug: "patchboard",
+      reason: "Broken pricing",
+      detail: "Operator review should clear this report.",
+    });
+    const resolved = await caller.store.ops.resolveAppReport({
+      id: report.id,
+      resolutionNote: "Reviewed and closed.",
+    });
+    const dashboard = await caller.store.ops.dashboard();
+
+    expect(order.status).toBe("PENDING_CONFIRMATION");
+    expect(confirmed.status).toBe("SUCCEEDED");
+    expect(resolved.status).toBe("RESOLVED");
+    expect(dashboard.summary.succeededOrders).toBeGreaterThan(0);
+  });
+
+  it("returns checkout quotes, markets, and developer-console summaries", async () => {
+    const caller = createCaller();
+
+    const [markets, quote, summary] = await Promise.all([
+      caller.store.checkout.markets(),
+      caller.store.checkout.quote({
+        appSlug: "patchboard",
+        countryCode: "US",
+        currencyCode: "USD",
+        platform: "WEB",
+      }),
+      caller.store.developerConsole.summary(),
+    ]);
+
+    expect(markets.length).toBeGreaterThan(0);
+    expect(quote.quote.paymentMethods).toContain("CARD");
+    expect(summary.find((entry) => entry.developer.slug === "orbit-works")?.apps.length).toBeGreaterThan(0);
   });
 
   it("throws a not-found error for missing app slugs", async () => {

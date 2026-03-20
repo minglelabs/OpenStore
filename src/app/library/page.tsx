@@ -1,15 +1,29 @@
 import { Clock3, DownloadCloud, LibraryBig, RefreshCw } from "lucide-react";
 
+import {
+  hidePurchaseAction,
+  pauseDownloadAction,
+  queueInstallAction,
+  removeFromWishlistAction,
+  restorePurchasesAction,
+  resumeDownloadAction,
+  retryDownloadAction,
+  unhidePurchaseAction,
+} from "@/app/_actions/store-actions";
 import { AppRow } from "@/components/store/app-row";
 import { SectionHeading } from "@/components/store/section-heading";
+import { SubmitButton } from "@/components/store/submit-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { getCaller } from "@/server/api/server";
 
 export default async function LibraryPage() {
   const caller = getCaller();
-  const library = await caller.store.library();
+  const [library, purchaseHistory, hiddenPurchases] = await Promise.all([
+    caller.store.library(),
+    caller.store.libraryTools.purchaseHistory(),
+    caller.store.libraryTools.hiddenPurchases(),
+  ]);
 
   return (
     <>
@@ -51,7 +65,12 @@ export default async function LibraryPage() {
             title="Available updates"
             description="Visible progress and clear status matter more than decorative motion here."
           />
-          <Button variant="secondary">Resume all</Button>
+          <form action={restorePurchasesAction}>
+            <input name="returnPath" type="hidden" value="/library" />
+            <SubmitButton pendingLabel="Restoring..." variant="secondary">
+              Restore purchases
+            </SubmitButton>
+          </form>
         </div>
         <div className="grid gap-4">
           {library.updates.map((item) => (
@@ -66,6 +85,22 @@ export default async function LibraryPage() {
                 <Badge variant="success">{item.eta}</Badge>
               </div>
               <Progress className="mt-4" value={item.progress} />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <form action={pauseDownloadAction}>
+                  <input name="slug" type="hidden" value={item.app.slug} />
+                  <input name="returnPath" type="hidden" value="/library" />
+                  <SubmitButton pendingLabel="Pausing..." size="sm" variant="outline">
+                    Pause
+                  </SubmitButton>
+                </form>
+                <form action={resumeDownloadAction}>
+                  <input name="slug" type="hidden" value={item.app.slug} />
+                  <input name="returnPath" type="hidden" value="/library" />
+                  <SubmitButton pendingLabel="Resuming..." size="sm" variant="secondary">
+                    Resume
+                  </SubmitButton>
+                </form>
+              </div>
             </div>
           ))}
         </div>
@@ -103,6 +138,29 @@ export default async function LibraryPage() {
                   <span>{item.progress}%</span>
                 </div>
                 <Progress className="mt-3" value={item.progress} />
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <form action={pauseDownloadAction}>
+                    <input name="slug" type="hidden" value={item.app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Pausing..." size="sm" variant="outline">
+                      Pause
+                    </SubmitButton>
+                  </form>
+                  <form action={resumeDownloadAction}>
+                    <input name="slug" type="hidden" value={item.app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Resuming..." size="sm" variant="secondary">
+                      Resume
+                    </SubmitButton>
+                  </form>
+                  <form action={retryDownloadAction}>
+                    <input name="slug" type="hidden" value={item.app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Retrying..." size="sm">
+                      Retry
+                    </SubmitButton>
+                  </form>
+                </div>
               </div>
             ))}
           </div>
@@ -115,7 +173,28 @@ export default async function LibraryPage() {
           />
           <div className="space-y-4">
             {library.wishlist.map((app) => (
-              <AppRow key={app.slug} app={app} compact />
+              <div
+                key={app.slug}
+                className="rounded-[28px] border border-white/40 bg-white/75 p-4 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+              >
+                <AppRow app={app} compact />
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <form action={queueInstallAction}>
+                    <input name="slug" type="hidden" value={app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Queueing..." size="sm">
+                      Queue install
+                    </SubmitButton>
+                  </form>
+                  <form action={removeFromWishlistAction}>
+                    <input name="slug" type="hidden" value={app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Removing..." size="sm" variant="outline">
+                      Remove
+                    </SubmitButton>
+                  </form>
+                </div>
+              </div>
             ))}
           </div>
           <div className="rounded-[28px] border border-white/40 bg-[var(--ink-strong)] p-5 text-white shadow-[0_16px_40px_rgba(17,28,55,0.14)]">
@@ -132,6 +211,69 @@ export default async function LibraryPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-4">
+          <SectionHeading
+            eyebrow="Purchase history"
+            title="Owned apps and visibility controls"
+            description="Ownership history should be reviewable and reversible."
+          />
+          <div className="space-y-4">
+            {purchaseHistory.map((entry) => (
+              <div
+                key={`${entry.slug}-${entry.purchasedAt}`}
+                className="rounded-[28px] border border-white/40 bg-white/75 p-4 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+              >
+                <AppRow app={entry.app} compact />
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
+                  <span>
+                    {entry.purchasedAt} · {entry.pricePaid}
+                  </span>
+                  {entry.hidden ? <Badge variant="muted">Hidden</Badge> : null}
+                </div>
+                {!entry.hidden ? (
+                  <form action={hidePurchaseAction} className="mt-4">
+                    <input name="slug" type="hidden" value={entry.app.slug} />
+                    <input name="returnPath" type="hidden" value="/library" />
+                    <SubmitButton pendingLabel="Updating..." size="sm" variant="outline">
+                      Hide purchase
+                    </SubmitButton>
+                  </form>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SectionHeading
+            eyebrow="Hidden purchases"
+            title="Restore visibility"
+            description="Users should be able to hide and unhide ownership records without friction."
+          />
+          <div className="space-y-4">
+            {hiddenPurchases.map((entry) => (
+              <div
+                key={entry.slug}
+                className="rounded-[28px] border border-white/40 bg-white/75 p-4 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+              >
+                <AppRow app={entry.app} compact />
+                <p className="mt-4 text-sm text-[var(--ink-soft)]">
+                  Hidden {entry.hiddenAt}
+                </p>
+                <form action={unhidePurchaseAction} className="mt-4">
+                  <input name="slug" type="hidden" value={entry.app.slug} />
+                  <input name="returnPath" type="hidden" value="/library" />
+                  <SubmitButton pendingLabel="Restoring..." size="sm" variant="secondary">
+                    Unhide purchase
+                  </SubmitButton>
+                </form>
+              </div>
+            ))}
           </div>
         </div>
       </section>

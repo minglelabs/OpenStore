@@ -3,6 +3,12 @@ import { z } from "zod";
 
 import {
   addToWishlist,
+  cancelCheckoutOrder,
+  confirmCheckoutOrder,
+  createCheckoutOrder,
+  getCheckoutOrderById,
+  getCheckoutQuoteForApp,
+  getCheckoutMarkets,
   getAccountSnapshotService,
   getAppBySlugService,
   getAppDetailSections,
@@ -10,6 +16,7 @@ import {
   getCategoryBySlugService,
   getChartsSnapshot,
   getCollectionBySlugService,
+  getDeveloperConsoleSnapshot,
   getDeveloperBySlugService,
   getDeveloperCatalog,
   getDeviceList,
@@ -17,6 +24,7 @@ import {
   getHiddenPurchases,
   getLibrarySnapshotService,
   getNotificationSettings,
+  getOperationsDashboard,
   getPurchaseHistory,
   getRecentSearches,
   getSearchSnapshot,
@@ -26,6 +34,7 @@ import {
   getTodayFeedSnapshot,
   getTrendingSearches,
   hidePurchase,
+  listCheckoutOrders,
   listApps,
   listCategories,
   listCollections,
@@ -37,6 +46,8 @@ import {
   reportApp,
   reportDeveloper,
   restorePurchases,
+  resolveAppReport,
+  resolveDeveloperReport,
   resumeDownload,
   retryDownload,
   signOutDevice,
@@ -47,6 +58,7 @@ import {
   getBillingDetails,
 } from "@/lib/store-service";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { checkoutPlatforms, paymentMethodTypes } from "@/server/commerce/contracts/registry";
 
 const appSlugSchema = z.object({ slug: z.string() });
 const developerSlugSchema = z.object({ slug: z.string() });
@@ -184,6 +196,27 @@ const developerReportInputSchema = z.object({
   developerSlug: z.string(),
   reason: z.string().trim().min(1),
   detail: z.string().trim().optional(),
+});
+
+const checkoutQuoteInputSchema = z.object({
+  appSlug: z.string(),
+  countryCode: z.string().trim().length(2),
+  currencyCode: z.string().trim().length(3),
+  platform: z.enum(checkoutPlatforms),
+  preferMerchantOfRecord: z.boolean().optional(),
+});
+
+const checkoutOrderIdSchema = z.object({
+  id: z.string().trim().min(1),
+});
+
+const confirmCheckoutInputSchema = checkoutOrderIdSchema.extend({
+  paymentMethod: z.enum(paymentMethodTypes).optional(),
+});
+
+const resolveReportInputSchema = z.object({
+  id: z.string().trim().min(1),
+  resolutionNote: z.string().trim().optional(),
 });
 
 const catalogRouter = createTRPCRouter({
@@ -349,6 +382,45 @@ const reportsRouter = createTRPCRouter({
     }),
 });
 
+const checkoutRouter = createTRPCRouter({
+  markets: publicProcedure.query(() => getCheckoutMarkets()),
+  quote: publicProcedure
+    .input(checkoutQuoteInputSchema)
+    .query(({ input }) => getCheckoutQuoteForApp(input)),
+  orders: publicProcedure.query(() => listCheckoutOrders()),
+  orderById: publicProcedure
+    .input(checkoutOrderIdSchema)
+    .query(({ input }) => getCheckoutOrderById(input.id)),
+  create: publicProcedure
+    .input(checkoutQuoteInputSchema)
+    .mutation(({ input }) => createCheckoutOrder(input)),
+  confirm: publicProcedure
+    .input(confirmCheckoutInputSchema)
+    .mutation(({ input }) =>
+      confirmCheckoutOrder({
+        id: input.id,
+        paymentMethod: input.paymentMethod,
+      }),
+    ),
+  cancel: publicProcedure
+    .input(checkoutOrderIdSchema)
+    .mutation(({ input }) => cancelCheckoutOrder(input.id)),
+});
+
+const opsRouter = createTRPCRouter({
+  dashboard: publicProcedure.query(() => getOperationsDashboard()),
+  resolveAppReport: publicProcedure
+    .input(resolveReportInputSchema)
+    .mutation(({ input }) => resolveAppReport(input.id, input.resolutionNote)),
+  resolveDeveloperReport: publicProcedure
+    .input(resolveReportInputSchema)
+    .mutation(({ input }) => resolveDeveloperReport(input.id, input.resolutionNote)),
+});
+
+const developerConsoleRouter = createTRPCRouter({
+  summary: publicProcedure.query(() => getDeveloperConsoleSnapshot()),
+});
+
 export const storeRouter = createTRPCRouter({
   today: publicProcedure.query(() => getTodayFeedSnapshot()),
   discover: publicProcedure.query(() => getDiscoverFeedSnapshot()),
@@ -392,4 +464,7 @@ export const storeRouter = createTRPCRouter({
   accountTools: accountRouter,
   reviews: reviewsRouter,
   reports: reportsRouter,
+  checkout: checkoutRouter,
+  ops: opsRouter,
+  developerConsole: developerConsoleRouter,
 });

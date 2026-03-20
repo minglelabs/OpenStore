@@ -1,7 +1,13 @@
+import Link from "next/link";
 import { CreditCard, ShieldCheck, Smartphone, BellRing } from "lucide-react";
 
+import {
+  signOutDeviceAction,
+  toggleNotificationAction,
+} from "@/app/_actions/store-actions";
 import { AppRow } from "@/components/store/app-row";
 import { SectionHeading } from "@/components/store/section-heading";
+import { SubmitButton } from "@/components/store/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { getCaller } from "@/server/api/server";
 
@@ -56,6 +62,14 @@ export default async function AccountPage() {
                     {item.enabled ? "On" : "Off"}
                   </Badge>
                 </div>
+                <form action={toggleNotificationAction} className="mt-4">
+                  <input name="label" type="hidden" value={item.label} />
+                  <input name="enabled" type="hidden" value={String(!item.enabled)} />
+                  <input name="returnPath" type="hidden" value="/account" />
+                  <SubmitButton pendingLabel="Saving..." size="sm" variant="secondary">
+                    Turn {item.enabled ? "off" : "on"}
+                  </SubmitButton>
+                </form>
               </div>
             ))}
           </div>
@@ -89,6 +103,13 @@ export default async function AccountPage() {
                 <p className="mt-3 text-sm text-[var(--ink-soft)]">
                   Last seen {device.lastSeen}
                 </p>
+                <form action={signOutDeviceAction} className="mt-4">
+                  <input name="name" type="hidden" value={device.name} />
+                  <input name="returnPath" type="hidden" value="/account" />
+                  <SubmitButton pendingLabel="Signing out..." size="sm" variant="outline">
+                    Sign out this device
+                  </SubmitButton>
+                </form>
               </div>
             ))}
           </div>
@@ -144,6 +165,27 @@ export default async function AccountPage() {
             ))}
           </ul>
         </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Link
+          href="/developer-console"
+          className="rounded-[28px] border border-white/40 bg-white/75 p-5 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+        >
+          <p className="text-sm font-medium text-[var(--ink-soft)]">Developer console</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink-strong)]">
+            Review app portfolio and checkout sales
+          </p>
+        </Link>
+        <Link
+          href="/ops-console"
+          className="rounded-[28px] border border-white/40 bg-[var(--ink-strong)] p-5 text-white shadow-[0_16px_40px_rgba(17,28,55,0.14)]"
+        >
+          <p className="text-sm font-medium text-white/70">Ops console</p>
+          <p className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
+            Resolve reports and inspect checkout orders
+          </p>
+        </Link>
       </section>
     </>
   );

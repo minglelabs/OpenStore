@@ -1,11 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import type {
-  ActivityItem,
-  DeviceRecord,
   EnrichedApp,
   EnrichedCollection,
-  NotificationPreference,
   ReviewRecord,
 } from "@/lib/store-data";
 import {
@@ -20,161 +17,165 @@ import {
   getCollectionBySlug,
   getDeveloperBySlug,
   getDiscoverFeed,
-  getLibrarySnapshot,
   getTodayFeed,
   searchStore,
   type ChartView,
 } from "@/lib/store-data";
+import {
+  createInitialStoreState,
+  readStoreState,
+  resetPersistentStoreState,
+  updateStoreState,
+  type AppReport,
+  type CheckoutOrder,
+  type DeveloperReport,
+  type HiddenPurchaseEntry,
+  type PurchaseHistoryEntry,
+  type QueueRuntimeItem,
+  type StoreSessionState,
+} from "@/lib/store-state";
 import { averageProgress } from "@/lib/utils";
+import {
+  buildCheckoutSessionBlueprint,
+  type CheckoutSessionBlueprint,
+} from "@/server/commerce/checkout/session";
+import {
+  defaultContractRegistry,
+  resolveCheckoutQuote,
+  type CheckoutPlatform,
+  type PaymentMethodType,
+  type ProductType,
+} from "@/server/commerce/contracts/registry";
 
 export type AppStatus = EnrichedApp["status"];
 export type PricingFilter = "any" | "free" | "paid" | "subscription";
 export type AppSort = "featured" | "rating" | "downloads" | "recent";
 export type SearchSort = "relevance" | "rating" | "downloads" | "recent";
-export type QueueRuntimeItem = {
-  slug: string;
-  progress: number;
-  eta: string;
-  paused?: boolean;
-};
 
-export type PurchaseHistoryEntry = {
-  slug: string;
-  purchasedAt: string;
-  pricePaid: string;
-};
-
-export type HiddenPurchaseEntry = {
-  slug: string;
-  hiddenAt: string;
-};
-
-export type AppReport = {
-  id: string;
-  appSlug: string;
-  reason: string;
-  detail?: string;
-  submittedAt: string;
-};
-
-export type DeveloperReport = {
-  id: string;
-  developerSlug: string;
-  reason: string;
-  detail?: string;
-  submittedAt: string;
-};
-
-type SessionState = {
-  installed: string[];
-  updates: QueueRuntimeItem[];
-  queue: QueueRuntimeItem[];
-  wishlist: string[];
-  activity: ActivityItem[];
-  notifications: NotificationPreference[];
-  devices: DeviceRecord[];
-  purchaseHistory: PurchaseHistoryEntry[];
-  hiddenPurchases: HiddenPurchaseEntry[];
-  recentSearches: string[];
-  reviewsByApp: Record<string, ReviewRecord[]>;
-  appReports: AppReport[];
-  developerReports: DeveloperReport[];
-};
-
-const baseLibrarySnapshot = getLibrarySnapshot();
 const baseAccountSnapshot = getAccountSnapshot();
-const baseRecentSearches = ["privacy", "sleep", "remote work", "music", "ai"];
-const basePurchaseHistory: PurchaseHistoryEntry[] = [
-  {
-    slug: "arcade-lane",
-    purchasedAt: "February 4, 2026",
-    pricePaid: "$3.99",
-  },
-  {
-    slug: "patchboard",
-    purchasedAt: "January 28, 2026",
-    pricePaid: "$6.99",
-  },
-  {
-    slug: "studio-cast",
-    purchasedAt: "January 12, 2026",
-    pricePaid: "$8.99",
-  },
-];
-const baseHiddenPurchases: HiddenPurchaseEntry[] = [
-  {
-    slug: "studio-cast",
-    hiddenAt: "February 20, 2026",
-  },
-];
 const baseReviewsByApp = Object.fromEntries(
   getAllApps().map((app) => [app.slug, structuredClone(app.reviews)]),
 ) as Record<string, ReviewRecord[]>;
+const initialSessionState = createInitialStoreState(baseReviewsByApp);
 
-function createInitialSessionState(): SessionState {
-  return structuredClone({
-    installed: baseLibrarySnapshot.installed.map((app) => app.slug),
-    updates: baseLibrarySnapshot.updates.map((item) => ({
-      slug: item.slug,
-      progress: item.progress,
-      eta: item.eta,
-    })),
-    queue: baseLibrarySnapshot.queue.map((item) => ({
-      slug: item.slug,
-      progress: item.progress,
-      eta: item.eta,
-    })),
-    wishlist: baseLibrarySnapshot.wishlist.map((app) => app.slug),
-    activity: baseLibrarySnapshot.activity,
-    notifications: baseAccountSnapshot.notifications,
-    devices: baseAccountSnapshot.devices,
-    purchaseHistory: basePurchaseHistory,
-    hiddenPurchases: baseHiddenPurchases,
-    recentSearches: baseRecentSearches,
-    reviewsByApp: baseReviewsByApp,
-    appReports: [],
-    developerReports: [],
-  });
+function getSessionState() {
+  return readStoreState(initialSessionState);
 }
 
-let sessionState = createInitialSessionState();
-
-function getReviewList(appSlug: string) {
-  return structuredClone(sessionState.reviewsByApp[appSlug] ?? []);
+function mutateSessionState<T>(updater: (state: StoreSessionState) => T) {
+  return updateStoreState(initialSessionState, updater);
 }
 
-function resolveAppStatus(appSlug: string): AppStatus {
-  if (sessionState.updates.some((item) => item.slug === appSlug)) {
+function getReviewListFromState(state: StoreSessionState, appSlug: string) {
+  return structuredClone(state.reviewsByApp[appSlug] ?? []);
+}
+
+function resolveAppStatusFromState(state: StoreSessionState, appSlug: string): AppStatus {
+  if (state.updates.some((item) => item.slug === appSlug)) {
     return "update";
   }
 
-  if (sessionState.queue.some((item) => item.slug === appSlug)) {
+  if (state.queue.some((item) => item.slug === appSlug)) {
     return "queued";
   }
 
-  if (sessionState.installed.includes(appSlug)) {
+  if (state.installed.includes(appSlug)) {
     return "installed";
   }
 
-  if (sessionState.wishlist.includes(appSlug)) {
+  if (state.wishlist.includes(appSlug)) {
     return "wishlist";
   }
 
   return "available";
 }
 
-function hydrateApp(app: EnrichedApp): EnrichedApp {
+function hydrateAppFromState(state: StoreSessionState, app: EnrichedApp): EnrichedApp {
   return {
     ...app,
-    status: resolveAppStatus(app.slug),
-    reviews: getReviewList(app.slug),
+    status: resolveAppStatusFromState(state, app.slug),
+    reviews: getReviewListFromState(state, app.slug),
   };
 }
 
-function hydrateCollection(collection: EnrichedCollection): EnrichedCollection {
+function hydrateCollectionFromState(
+  state: StoreSessionState,
+  collection: EnrichedCollection,
+): EnrichedCollection {
   return {
     ...collection,
-    apps: collection.apps.map(hydrateApp),
+    apps: collection.apps.map((app) => hydrateAppFromState(state, app)),
+  };
+}
+
+function getHydratedAppOrNull(state: StoreSessionState, slug: string) {
+  const app = getAppBySlug(slug);
+  return app ? hydrateAppFromState(state, app) : null;
+}
+
+function getHydratedApps(state: StoreSessionState) {
+  return getAllApps().map((app) => hydrateAppFromState(state, app));
+}
+
+function getLibrarySnapshotFromState(state: StoreSessionState) {
+  const installed = state.installed
+    .map((slug) => getHydratedAppOrNull(state, slug))
+    .filter((app): app is EnrichedApp => Boolean(app));
+  const updates = state.updates
+    .map((item) => ({
+      ...item,
+      app: getHydratedAppOrNull(state, item.slug),
+    }))
+    .filter((item): item is QueueRuntimeItem & { app: EnrichedApp } => Boolean(item.app));
+  const queue = state.queue
+    .map((item) => ({
+      ...item,
+      app: getHydratedAppOrNull(state, item.slug),
+    }))
+    .filter((item): item is QueueRuntimeItem & { app: EnrichedApp } => Boolean(item.app));
+  const wishlist = state.wishlist
+    .map((slug) => getHydratedAppOrNull(state, slug))
+    .filter((app): app is EnrichedApp => Boolean(app));
+
+  return {
+    installed,
+    updates,
+    queue,
+    wishlist,
+    activity: structuredClone(state.activity),
+    queueAverage: averageProgress(queue.map((item) => item.progress)),
+  };
+}
+
+function getPurchaseHistoryFromState(state: StoreSessionState) {
+  return state.purchaseHistory
+    .map((entry) => ({
+      ...entry,
+      app: getHydratedAppOrNull(state, entry.slug),
+      hidden: state.hiddenPurchases.some((item) => item.slug === entry.slug),
+    }))
+    .filter((entry): entry is PurchaseHistoryEntry & { app: EnrichedApp; hidden: boolean } =>
+      Boolean(entry.app),
+    );
+}
+
+function getHiddenPurchasesFromState(state: StoreSessionState) {
+  return state.hiddenPurchases
+    .map((entry) => ({
+      ...entry,
+      app: getHydratedAppOrNull(state, entry.slug),
+    }))
+    .filter((entry): entry is HiddenPurchaseEntry & { app: EnrichedApp } => Boolean(entry.app));
+}
+
+function getAccountSnapshotFromState(state: StoreSessionState) {
+  return {
+    ...baseAccountSnapshot,
+    notifications: structuredClone(state.notifications),
+    devices: structuredClone(state.devices),
+    activeSubscriptions: state.activeSubscriptionSlugs
+      .map((slug) => getHydratedAppOrNull(state, slug))
+      .filter((app): app is EnrichedApp => Boolean(app)),
   };
 }
 
@@ -209,30 +210,105 @@ function matchesPricingFilter(priceLabel: string, pricing: PricingFilter) {
   }
 }
 
-function pushActivity(title: string, detail: string, timestamp = "Just now") {
-  sessionState.activity.unshift({ title, detail, timestamp });
-  sessionState.activity = sessionState.activity.slice(0, 12);
+function pushActivity(
+  state: StoreSessionState,
+  title: string,
+  detail: string,
+  timestamp = "Just now",
+) {
+  state.activity.unshift({ title, detail, timestamp });
+  state.activity = state.activity.slice(0, 12);
 }
 
-function getQueuedItem(slug: string) {
-  return sessionState.queue.find((item) => item.slug === slug);
+function getQueuedItem(state: StoreSessionState, slug: string) {
+  return state.queue.find((item) => item.slug === slug);
 }
 
-function getUpdateItem(slug: string) {
-  return sessionState.updates.find((item) => item.slug === slug);
+function getUpdateItem(state: StoreSessionState, slug: string) {
+  return state.updates.find((item) => item.slug === slug);
 }
 
-function getHydratedAppOrNull(slug: string) {
-  const app = getAppBySlug(slug);
-  return app ? hydrateApp(app) : null;
+function parsePriceLabel(priceLabel: string) {
+  const numeric = Number(priceLabel.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
 }
 
-function getHydratedApps() {
-  return getAllApps().map(hydrateApp);
+function formatCurrencyLabel(currencyCode: string, amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currencyCode,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function inferProductType(app: EnrichedApp): ProductType {
+  const normalized = app.priceLabel.toLowerCase();
+
+  if (
+    normalized.includes("trial") ||
+    normalized.includes("premium") ||
+    normalized.includes("pro")
+  ) {
+    return "AUTO_RENEWING_SUBSCRIPTION";
+  }
+
+  return "PAID_APP";
+}
+
+function requirePaidApp(app: EnrichedApp) {
+  if (app.priceLabel === "Free") {
+    throw new Error(`App ${app.slug} does not require checkout.`);
+  }
+}
+
+function attachAppReport(state: StoreSessionState, report: AppReport) {
+  return {
+    ...report,
+    app: getHydratedAppOrNull(state, report.appSlug),
+  };
+}
+
+function attachDeveloperReport(state: StoreSessionState, report: DeveloperReport) {
+  return {
+    ...report,
+    developer: getDeveloperBySlugService(report.developerSlug),
+  };
+}
+
+function buildDeveloperSalesSnapshot(
+  orders: CheckoutOrder[],
+  developerSlug: string,
+  status: CheckoutOrder["status"] = "SUCCEEDED",
+) {
+  const filtered = orders.filter(
+    (order) => order.developerSlug === developerSlug && order.status === status,
+  );
+
+  const totals = new Map<string, number>();
+
+  for (const order of filtered) {
+    totals.set(
+      order.currencyCode,
+      (totals.get(order.currencyCode) ?? 0) + parsePriceLabel(order.amountLabel),
+    );
+  }
+
+  return {
+    count: filtered.length,
+    totalsByCurrency: [...totals.entries()].map(([currencyCode, amount]) => ({
+      currencyCode,
+      amount: Number(amount.toFixed(2)),
+      label: formatCurrencyLabel(currencyCode, amount),
+    })),
+    orders: filtered.sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    ),
+  };
 }
 
 export function resetStoreServiceState() {
-  sessionState = createInitialSessionState();
+  resetPersistentStoreState(initialSessionState);
 }
 
 export function getCatalogSummary() {
@@ -253,8 +329,9 @@ export function listApps(input?: {
   sort?: AppSort;
   ids?: string[];
 }) {
+  const state = getSessionState();
   const filtered = sortApps(
-    getHydratedApps().filter((app) => {
+    getHydratedApps(state).filter((app) => {
       if (input?.ids && !input.ids.includes(app.slug)) {
         return false;
       }
@@ -298,8 +375,9 @@ export function listCategories() {
 }
 
 export function listCollections(input?: { categorySlug?: string; limit?: number }) {
+  const state = getSessionState();
   const collections = getAllCollections()
-    .map(hydrateCollection)
+    .map((collection) => hydrateCollectionFromState(state, collection))
     .filter(
       (collection) =>
         !input?.categorySlug || collection.category?.slug === input.categorySlug,
@@ -311,24 +389,30 @@ export function listCollections(input?: { categorySlug?: string; limit?: number 
 }
 
 export function getTodayFeedSnapshot() {
+  const state = getSessionState();
   const feed = getTodayFeed();
 
   return {
     ...feed,
-    hero: feed.hero ? hydrateApp(feed.hero) : null,
-    spotlightApps: feed.spotlightApps.map(hydrateApp),
-    collections: feed.collections.map(hydrateCollection),
-    releaseRadar: feed.releaseRadar.map(hydrateApp),
+    hero: feed.hero ? hydrateAppFromState(state, feed.hero) : null,
+    spotlightApps: feed.spotlightApps.map((app) => hydrateAppFromState(state, app)),
+    collections: feed.collections.map((collection) =>
+      hydrateCollectionFromState(state, collection),
+    ),
+    releaseRadar: feed.releaseRadar.map((app) => hydrateAppFromState(state, app)),
   };
 }
 
 export function getDiscoverFeedSnapshot() {
+  const state = getSessionState();
   const feed = getDiscoverFeed();
 
   return {
     ...feed,
-    collections: feed.collections.map(hydrateCollection),
-    hiddenGems: feed.hiddenGems.map(hydrateApp),
+    collections: feed.collections.map((collection) =>
+      hydrateCollectionFromState(state, collection),
+    ),
+    hiddenGems: feed.hiddenGems.map((app) => hydrateAppFromState(state, app)),
   };
 }
 
@@ -337,11 +421,10 @@ export function getChartsSnapshot(input: {
   categorySlug?: string;
   limit?: number;
 }) {
+  const state = getSessionState();
   const ranked = getCharts(input.view)
-    .map(hydrateApp)
-    .filter(
-      (app) => !input.categorySlug || app.category.slug === input.categorySlug,
-    );
+    .map((app) => hydrateAppFromState(state, app))
+    .filter((app) => !input.categorySlug || app.category.slug === input.categorySlug);
 
   return typeof input.limit === "number" ? ranked.slice(0, input.limit) : ranked;
 }
@@ -353,9 +436,10 @@ export function getSearchSnapshot(input: {
   minRating?: number;
   sort?: SearchSort;
 }) {
+  const state = getSessionState();
   const result = searchStore(input.query);
   let apps = result.apps
-    .map((app) => getHydratedAppOrNull(app.slug))
+    .map((app) => getHydratedAppOrNull(state, app.slug))
     .filter((app): app is EnrichedApp => Boolean(app))
     .filter((app) => {
       if (input.categorySlug && app.category.slug !== input.categorySlug) {
@@ -398,8 +482,9 @@ export function getSearchSuggestions(query: string) {
     return [];
   }
 
+  const state = getSessionState();
   const suggestions = [
-    ...getHydratedApps().map((app) => app.name),
+    ...getHydratedApps(state).map((app) => app.name),
     ...getAllDevelopers().map((developer) => developer.name),
     ...getAllCategories().map((category) => category.name),
   ].filter((value) => value.toLowerCase().includes(normalized));
@@ -408,200 +493,181 @@ export function getSearchSuggestions(query: string) {
 }
 
 export function getTrendingSearches() {
-  return baseRecentSearches;
+  return structuredClone(initialSessionState.recentSearches);
 }
 
 export function getRecentSearches() {
-  return structuredClone(sessionState.recentSearches);
+  return structuredClone(getSessionState().recentSearches);
 }
 
 export function recordRecentSearch(query: string) {
   const normalized = query.trim();
 
-  if (!normalized) {
-    return getRecentSearches();
-  }
+  return mutateSessionState((state) => {
+    if (!normalized) {
+      return structuredClone(state.recentSearches);
+    }
 
-  sessionState.recentSearches = [
-    normalized,
-    ...sessionState.recentSearches.filter((item) => item !== normalized),
-  ].slice(0, 8);
+    state.recentSearches = [
+      normalized,
+      ...state.recentSearches.filter((item) => item !== normalized),
+    ].slice(0, 8);
 
-  return getRecentSearches();
+    return structuredClone(state.recentSearches);
+  });
 }
 
 export function getLibrarySnapshotService() {
-  const installed = sessionState.installed
-    .map((slug) => getHydratedAppOrNull(slug))
-    .filter((app): app is EnrichedApp => Boolean(app));
-  const updates = sessionState.updates
-    .map((item) => ({
-      ...item,
-      app: getHydratedAppOrNull(item.slug),
-    }))
-    .filter((item): item is QueueRuntimeItem & { app: EnrichedApp } => Boolean(item.app));
-  const queue = sessionState.queue
-    .map((item) => ({
-      ...item,
-      app: getHydratedAppOrNull(item.slug),
-    }))
-    .filter((item): item is QueueRuntimeItem & { app: EnrichedApp } => Boolean(item.app));
-  const wishlist = sessionState.wishlist
-    .map((slug) => getHydratedAppOrNull(slug))
-    .filter((app): app is EnrichedApp => Boolean(app));
-
-  return {
-    installed,
-    updates,
-    queue,
-    wishlist,
-    activity: structuredClone(sessionState.activity),
-    queueAverage: averageProgress(queue.map((item) => item.progress)),
-  };
+  const state = getSessionState();
+  return getLibrarySnapshotFromState(state);
 }
 
 export function getPurchaseHistory() {
-  return sessionState.purchaseHistory
-    .map((entry) => ({
-      ...entry,
-      app: getHydratedAppOrNull(entry.slug),
-      hidden: sessionState.hiddenPurchases.some((item) => item.slug === entry.slug),
-    }))
-    .filter((entry): entry is PurchaseHistoryEntry & { app: EnrichedApp; hidden: boolean } =>
-      Boolean(entry.app),
-    );
+  return getPurchaseHistoryFromState(getSessionState());
 }
 
 export function getHiddenPurchases() {
-  return sessionState.hiddenPurchases
-    .map((entry) => ({
-      ...entry,
-      app: getHydratedAppOrNull(entry.slug),
-    }))
-    .filter((entry): entry is HiddenPurchaseEntry & { app: EnrichedApp } => Boolean(entry.app));
+  return getHiddenPurchasesFromState(getSessionState());
 }
 
 export function addToWishlist(appSlug: string) {
-  if (!sessionState.wishlist.includes(appSlug)) {
-    sessionState.wishlist.unshift(appSlug);
-    pushActivity("App saved to wishlist", `Saved ${appSlug} for later review.`);
-  }
+  return mutateSessionState((state) => {
+    if (!state.wishlist.includes(appSlug)) {
+      state.wishlist.unshift(appSlug);
+      pushActivity(state, "App saved to wishlist", `Saved ${appSlug} for later review.`);
+    }
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function removeFromWishlist(appSlug: string) {
-  sessionState.wishlist = sessionState.wishlist.filter((slug) => slug !== appSlug);
-  pushActivity("Wishlist updated", `Removed ${appSlug} from the wishlist.`);
+  return mutateSessionState((state) => {
+    state.wishlist = state.wishlist.filter((slug) => slug !== appSlug);
+    pushActivity(state, "Wishlist updated", `Removed ${appSlug} from the wishlist.`);
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function queueInstall(appSlug: string) {
-  if (!getQueuedItem(appSlug) && !getUpdateItem(appSlug)) {
-    sessionState.queue.unshift({
-      slug: appSlug,
-      progress: 0,
-      eta: "Waiting for download slot",
-    });
-    sessionState.wishlist = sessionState.wishlist.filter((slug) => slug !== appSlug);
-    pushActivity("Download queued", `Queued ${appSlug} for installation.`);
-  }
+  return mutateSessionState((state) => {
+    if (!getQueuedItem(state, appSlug) && !getUpdateItem(state, appSlug)) {
+      state.queue.unshift({
+        slug: appSlug,
+        progress: 0,
+        eta: "Waiting for download slot",
+      });
+      state.wishlist = state.wishlist.filter((slug) => slug !== appSlug);
+      pushActivity(state, "Download queued", `Queued ${appSlug} for installation.`);
+    }
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function pauseDownload(appSlug: string) {
-  const item = getQueuedItem(appSlug) ?? getUpdateItem(appSlug);
+  return mutateSessionState((state) => {
+    const item = getQueuedItem(state, appSlug) ?? getUpdateItem(state, appSlug);
 
-  if (item) {
-    item.paused = true;
-    item.eta = "Paused";
-    pushActivity("Download paused", `Paused ${appSlug} in the transfer queue.`);
-  }
+    if (item) {
+      item.paused = true;
+      item.eta = "Paused";
+      pushActivity(state, "Download paused", `Paused ${appSlug} in the transfer queue.`);
+    }
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function resumeDownload(appSlug: string) {
-  const item = getQueuedItem(appSlug) ?? getUpdateItem(appSlug);
+  return mutateSessionState((state) => {
+    const item = getQueuedItem(state, appSlug) ?? getUpdateItem(state, appSlug);
 
-  if (item) {
-    item.paused = false;
-    item.eta = item.progress > 0 ? `${Math.max(1, 10 - Math.floor(item.progress / 10))} min left` : "Preparing download";
-    pushActivity("Download resumed", `Resumed ${appSlug} in the transfer queue.`);
-  }
+    if (item) {
+      item.paused = false;
+      item.eta =
+        item.progress > 0
+          ? `${Math.max(1, 10 - Math.floor(item.progress / 10))} min left`
+          : "Preparing download";
+      pushActivity(state, "Download resumed", `Resumed ${appSlug} in the transfer queue.`);
+    }
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function retryDownload(appSlug: string) {
-  const item = getQueuedItem(appSlug) ?? getUpdateItem(appSlug);
+  return mutateSessionState((state) => {
+    const item = getQueuedItem(state, appSlug) ?? getUpdateItem(state, appSlug);
 
-  if (item) {
-    item.paused = false;
-    item.progress = Math.min(item.progress, 5);
-    item.eta = "Retrying download";
-  } else {
-    sessionState.queue.unshift({
-      slug: appSlug,
-      progress: 5,
-      eta: "Retrying download",
-    });
-  }
+    if (item) {
+      item.paused = false;
+      item.progress = Math.min(item.progress, 5);
+      item.eta = "Retrying download";
+    } else {
+      state.queue.unshift({
+        slug: appSlug,
+        progress: 5,
+        eta: "Retrying download",
+      });
+    }
 
-  pushActivity("Download retry started", `Retry requested for ${appSlug}.`);
+    pushActivity(state, "Download retry started", `Retry requested for ${appSlug}.`);
 
-  return getLibrarySnapshotService();
+    return getLibrarySnapshotFromState(state);
+  });
 }
 
 export function hidePurchase(appSlug: string) {
-  if (!sessionState.hiddenPurchases.some((item) => item.slug === appSlug)) {
-    sessionState.hiddenPurchases.unshift({
-      slug: appSlug,
-      hiddenAt: "Just now",
-    });
-  }
+  return mutateSessionState((state) => {
+    if (!state.hiddenPurchases.some((item) => item.slug === appSlug)) {
+      state.hiddenPurchases.unshift({
+        slug: appSlug,
+        hiddenAt: "Just now",
+      });
+      pushActivity(state, "Purchase hidden", `Hid ${appSlug} from the visible history.`);
+    }
 
-  return getHiddenPurchases();
+    return getHiddenPurchasesFromState(state);
+  });
 }
 
 export function unhidePurchase(appSlug: string) {
-  sessionState.hiddenPurchases = sessionState.hiddenPurchases.filter(
-    (item) => item.slug !== appSlug,
-  );
+  return mutateSessionState((state) => {
+    state.hiddenPurchases = state.hiddenPurchases.filter((item) => item.slug !== appSlug);
+    pushActivity(state, "Purchase restored", `Restored ${appSlug} to the purchase history.`);
 
-  return getHiddenPurchases();
+    return getHiddenPurchasesFromState(state);
+  });
 }
 
 export function restorePurchases() {
-  const restored = getPurchaseHistory().filter((entry) => !entry.hidden);
-  pushActivity(
-    "Purchases restored",
-    `Restored ${restored.length} purchase records to the current session.`,
-  );
+  return mutateSessionState((state) => {
+    const restored = getPurchaseHistoryFromState(state).filter((entry) => !entry.hidden);
+    pushActivity(
+      state,
+      "Purchases restored",
+      `Restored ${restored.length} purchase records to the current session.`,
+    );
 
-  return {
-    restored,
-    restoredCount: restored.length,
-  };
+    return {
+      restored,
+      restoredCount: restored.length,
+    };
+  });
 }
 
 export function getAccountSnapshotService() {
-  return {
-    ...baseAccountSnapshot,
-    notifications: structuredClone(sessionState.notifications),
-    devices: structuredClone(sessionState.devices),
-    activeSubscriptions: baseAccountSnapshot.activeSubscriptions.map(hydrateApp),
-  };
+  return getAccountSnapshotFromState(getSessionState());
 }
 
 export function getNotificationSettings() {
-  return structuredClone(sessionState.notifications);
+  return structuredClone(getSessionState().notifications);
 }
 
 export function getDeviceList() {
-  return structuredClone(sessionState.devices);
+  return structuredClone(getSessionState().devices);
 }
 
 export function getBillingDetails() {
@@ -609,7 +675,11 @@ export function getBillingDetails() {
 }
 
 export function getSubscriptionApps() {
-  return baseAccountSnapshot.activeSubscriptions.map(hydrateApp);
+  const state = getSessionState();
+
+  return state.activeSubscriptionSlugs
+    .map((slug) => getHydratedAppOrNull(state, slug))
+    .filter((app): app is EnrichedApp => Boolean(app));
 }
 
 export function getSecurityControls() {
@@ -620,32 +690,37 @@ export function toggleNotification(input: {
   label: string;
   enabled?: boolean;
 }) {
-  sessionState.notifications = sessionState.notifications.map((notification) => {
-    if (notification.label !== input.label) {
-      return notification;
-    }
+  return mutateSessionState((state) => {
+    state.notifications = state.notifications.map((notification) => {
+      if (notification.label !== input.label) {
+        return notification;
+      }
 
-    return {
-      ...notification,
-      enabled:
-        typeof input.enabled === "boolean"
-          ? input.enabled
-          : !notification.enabled,
-    };
+      return {
+        ...notification,
+        enabled:
+          typeof input.enabled === "boolean"
+            ? input.enabled
+            : !notification.enabled,
+      };
+    });
+
+    return structuredClone(state.notifications);
   });
-
-  return getNotificationSettings();
 }
 
 export function signOutDevice(name: string) {
-  sessionState.devices = sessionState.devices.filter((device) => device.name !== name);
-  pushActivity("Device signed out", `Removed ${name} from the trusted device list.`);
+  return mutateSessionState((state) => {
+    state.devices = state.devices.filter((device) => device.name !== name);
+    pushActivity(state, "Device signed out", `Removed ${name} from the trusted device list.`);
 
-  return getDeviceList();
+    return structuredClone(state.devices);
+  });
 }
 
 export function getAppDetailSections(appSlug: string) {
-  const app = getHydratedAppOrNull(appSlug);
+  const state = getSessionState();
+  const app = getHydratedAppOrNull(state, appSlug);
 
   if (!app) {
     return null;
@@ -674,7 +749,7 @@ export function getAppDetailSections(appSlug: string) {
       size: app.size,
       version: app.version,
     },
-    reviews: getReviewList(app.slug),
+    reviews: getReviewListFromState(state, app.slug),
     relatedApps,
     relatedCollections,
   };
@@ -687,27 +762,30 @@ export function submitReview(input: {
   body: string;
   rating: number;
 }) {
-  const nextReview: ReviewRecord = {
-    appSlug: input.appSlug,
-    author: input.author,
-    title: input.title,
-    body: input.body,
-    rating: input.rating,
-    submittedAt: "Just now",
-  };
+  return mutateSessionState((state) => {
+    const nextReview: ReviewRecord = {
+      appSlug: input.appSlug,
+      author: input.author,
+      title: input.title,
+      body: input.body,
+      rating: input.rating,
+      submittedAt: "Just now",
+    };
 
-  const reviews = sessionState.reviewsByApp[input.appSlug] ?? [];
-  const existingIndex = reviews.findIndex((review) => review.author === input.author);
+    const reviews = state.reviewsByApp[input.appSlug] ?? [];
+    const existingIndex = reviews.findIndex((review) => review.author === input.author);
 
-  if (existingIndex >= 0) {
-    reviews.splice(existingIndex, 1, nextReview);
-  } else {
-    reviews.unshift(nextReview);
-  }
+    if (existingIndex >= 0) {
+      reviews.splice(existingIndex, 1, nextReview);
+    } else {
+      reviews.unshift(nextReview);
+    }
 
-  sessionState.reviewsByApp[input.appSlug] = reviews;
+    state.reviewsByApp[input.appSlug] = reviews;
+    pushActivity(state, "Review submitted", `Stored a review for ${input.appSlug}.`);
 
-  return getReviewList(input.appSlug);
+    return getReviewListFromState(state, input.appSlug);
+  });
 }
 
 export function updateReview(input: {
@@ -725,17 +803,21 @@ export function reportApp(input: {
   reason: string;
   detail?: string;
 }) {
-  const report: AppReport = {
-    id: `app-report-${randomUUID()}`,
-    appSlug: input.appSlug,
-    reason: input.reason,
-    detail: input.detail,
-    submittedAt: new Date().toISOString(),
-  };
+  return mutateSessionState((state) => {
+    const report: AppReport = {
+      id: `app-report-${randomUUID()}`,
+      appSlug: input.appSlug,
+      reason: input.reason,
+      detail: input.detail,
+      submittedAt: new Date().toISOString(),
+      status: "OPEN",
+    };
 
-  sessionState.appReports.unshift(report);
+    state.appReports.unshift(report);
+    pushActivity(state, "App reported", `Created an operator report for ${input.appSlug}.`);
 
-  return report;
+    return report;
+  });
 }
 
 export function reportDeveloper(input: {
@@ -743,25 +825,69 @@ export function reportDeveloper(input: {
   reason: string;
   detail?: string;
 }) {
-  const report: DeveloperReport = {
-    id: `developer-report-${randomUUID()}`,
-    developerSlug: input.developerSlug,
-    reason: input.reason,
-    detail: input.detail,
-    submittedAt: new Date().toISOString(),
-  };
+  return mutateSessionState((state) => {
+    const report: DeveloperReport = {
+      id: `developer-report-${randomUUID()}`,
+      developerSlug: input.developerSlug,
+      reason: input.reason,
+      detail: input.detail,
+      submittedAt: new Date().toISOString(),
+      status: "OPEN",
+    };
 
-  sessionState.developerReports.unshift(report);
+    state.developerReports.unshift(report);
+    pushActivity(
+      state,
+      "Developer reported",
+      `Created an operator report for ${input.developerSlug}.`,
+    );
 
-  return report;
+    return report;
+  });
+}
+
+export function resolveAppReport(id: string, resolutionNote?: string) {
+  return mutateSessionState((state) => {
+    const report = state.appReports.find((item) => item.id === id);
+
+    if (!report) {
+      throw new Error(`App report not found for id ${id}`);
+    }
+
+    report.status = "RESOLVED";
+    report.resolvedAt = new Date().toISOString();
+    report.resolutionNote = resolutionNote?.trim() || "Resolved in operator console.";
+    pushActivity(state, "App report resolved", `Closed ${report.id}.`);
+
+    return report;
+  });
+}
+
+export function resolveDeveloperReport(id: string, resolutionNote?: string) {
+  return mutateSessionState((state) => {
+    const report = state.developerReports.find((item) => item.id === id);
+
+    if (!report) {
+      throw new Error(`Developer report not found for id ${id}`);
+    }
+
+    report.status = "RESOLVED";
+    report.resolvedAt = new Date().toISOString();
+    report.resolutionNote = resolutionNote?.trim() || "Resolved in operator console.";
+    pushActivity(state, "Developer report resolved", `Closed ${report.id}.`);
+
+    return report;
+  });
 }
 
 export function getAppBySlugService(slug: string) {
+  const state = getSessionState();
   const app = getAppBySlug(slug);
-  return app ? hydrateApp(app) : null;
+  return app ? hydrateAppFromState(state, app) : null;
 }
 
 export function getDeveloperBySlugService(slug: string) {
+  const state = getSessionState();
   const developer = getDeveloperBySlug(slug);
 
   if (!developer) {
@@ -770,16 +896,18 @@ export function getDeveloperBySlugService(slug: string) {
 
   return {
     ...developer,
-    apps: developer.apps.map(hydrateApp),
+    apps: developer.apps.map((app) => hydrateAppFromState(state, app)),
   };
 }
 
 export function getCollectionBySlugService(slug: string) {
+  const state = getSessionState();
   const collection = getCollectionBySlug(slug);
-  return collection ? hydrateCollection(collection) : null;
+  return collection ? hydrateCollectionFromState(state, collection) : null;
 }
 
 export function getCategoryBySlugService(slug: string) {
+  const state = getSessionState();
   const category = getCategoryBySlug(slug);
 
   if (!category) {
@@ -788,7 +916,7 @@ export function getCategoryBySlugService(slug: string) {
 
   return {
     ...category,
-    apps: category.apps.map(hydrateApp),
+    apps: category.apps.map((app) => hydrateAppFromState(state, app)),
   };
 }
 
@@ -801,8 +929,269 @@ export function getDeveloperCatalog(slug: string) {
 
   return {
     ...developer,
-    relatedCategories: [
-      ...new Set(developer.apps.map((app) => app.category.name)),
-    ],
+    relatedCategories: [...new Set(developer.apps.map((app) => app.category.name))],
   };
+}
+
+export function getCheckoutMarkets() {
+  return defaultContractRegistry.storefrontRegions.map((region) => ({
+    countryCode: region.countryCode,
+    currencyCode: region.currencyCode,
+    languageCode: region.languageCode,
+    taxMode: region.taxMode,
+  }));
+}
+
+export function getCheckoutQuoteForApp(input: {
+  appSlug: string;
+  countryCode: string;
+  currencyCode: string;
+  platform: CheckoutPlatform;
+  preferMerchantOfRecord?: boolean;
+}) {
+  const app = getAppBySlugService(input.appSlug);
+
+  if (!app) {
+    throw new Error(`App not found for slug ${input.appSlug}`);
+  }
+
+  requirePaidApp(app);
+
+  const productType = inferProductType(app);
+  const quote = resolveCheckoutQuote({
+    countryCode: input.countryCode,
+    currencyCode: input.currencyCode,
+    platform: input.platform,
+    productType,
+    developerType: "THIRD_PARTY",
+    preferMerchantOfRecord: input.preferMerchantOfRecord,
+  });
+
+  return {
+    app,
+    productType,
+    quote,
+    amountLabel: app.priceLabel.startsWith("$")
+      ? formatCurrencyLabel(input.currencyCode, parsePriceLabel(app.priceLabel))
+      : `${formatCurrencyLabel(input.currencyCode, 0)} + subscription billing`,
+  };
+}
+
+export function createCheckoutOrder(input: {
+  appSlug: string;
+  countryCode: string;
+  currencyCode: string;
+  platform: CheckoutPlatform;
+  preferMerchantOfRecord?: boolean;
+}) {
+  const preview = getCheckoutQuoteForApp(input);
+
+  return mutateSessionState((state) => {
+    const orderId = `order_${randomUUID()}`;
+    const blueprint: CheckoutSessionBlueprint = buildCheckoutSessionBlueprint({
+      orderReference: orderId,
+      countryCode: input.countryCode,
+      currencyCode: input.currencyCode,
+      platform: input.platform,
+      productType: preview.productType,
+      developerType: "THIRD_PARTY",
+      preferMerchantOfRecord: input.preferMerchantOfRecord,
+    });
+
+    const order: CheckoutOrder = {
+      id: orderId,
+      appSlug: preview.app.slug,
+      developerSlug: preview.app.developer.slug,
+      productType: preview.productType,
+      countryCode: input.countryCode,
+      currencyCode: input.currencyCode,
+      platform: input.platform,
+      lane: blueprint.quote.lane,
+      provider: blueprint.quote.provider,
+      merchantEntityCode: blueprint.quote.merchantEntityCode,
+      merchantAccountKey: blueprint.quote.merchantAccountKey,
+      pspRouteKey: blueprint.quote.pspRouteKey,
+      consumerContractVersion: blueprint.quote.consumerContractVersion,
+      developerContractVersion: blueprint.quote.developerContractVersion,
+      paymentMethods: blueprint.quote.paymentMethods,
+      selectedPaymentMethod: blueprint.quote.paymentMethods[0],
+      amountLabel: preview.amountLabel,
+      warnings: blueprint.quote.warnings,
+      status: "PENDING_CONFIRMATION",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    state.checkoutOrders.unshift(order);
+    pushActivity(
+      state,
+      "Checkout session created",
+      `Prepared checkout for ${preview.app.slug} via ${order.provider}.`,
+    );
+
+    return order;
+  });
+}
+
+export function getCheckoutOrderById(id: string) {
+  const state = getSessionState();
+  const order = state.checkoutOrders.find((item) => item.id === id);
+
+  if (!order) {
+    return null;
+  }
+
+  return {
+    ...order,
+    app: getHydratedAppOrNull(state, order.appSlug),
+  };
+}
+
+export function listCheckoutOrders() {
+  const state = getSessionState();
+
+  return state.checkoutOrders
+    .map((order) => ({
+      ...order,
+      app: getHydratedAppOrNull(state, order.appSlug),
+    }))
+    .filter((order): order is CheckoutOrder & { app: EnrichedApp } => Boolean(order.app))
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    );
+}
+
+export function confirmCheckoutOrder(input: {
+  id: string;
+  paymentMethod?: PaymentMethodType;
+}) {
+  return mutateSessionState((state) => {
+    const order = state.checkoutOrders.find((item) => item.id === input.id);
+
+    if (!order) {
+      throw new Error(`Checkout order not found for id ${input.id}`);
+    }
+
+    if (input.paymentMethod && order.paymentMethods.includes(input.paymentMethod)) {
+      order.selectedPaymentMethod = input.paymentMethod;
+    }
+
+    order.status = "SUCCEEDED";
+    order.updatedAt = new Date().toISOString();
+
+    if (!state.purchaseHistory.some((entry) => entry.slug === order.appSlug)) {
+      state.purchaseHistory.unshift({
+        slug: order.appSlug,
+        purchasedAt: "Just now",
+        pricePaid: order.amountLabel,
+      });
+    }
+
+    if (
+      order.productType === "AUTO_RENEWING_SUBSCRIPTION" &&
+      !state.activeSubscriptionSlugs.includes(order.appSlug)
+    ) {
+      state.activeSubscriptionSlugs.unshift(order.appSlug);
+    }
+
+    if (!state.installed.includes(order.appSlug) && !getQueuedItem(state, order.appSlug)) {
+      state.queue.unshift({
+        slug: order.appSlug,
+        progress: 0,
+        eta: "Preparing download",
+      });
+    }
+
+    pushActivity(
+      state,
+      "Checkout completed",
+      `Confirmed ${order.appSlug} with ${order.selectedPaymentMethod}.`,
+    );
+
+    return order;
+  });
+}
+
+export function cancelCheckoutOrder(id: string) {
+  return mutateSessionState((state) => {
+    const order = state.checkoutOrders.find((item) => item.id === id);
+
+    if (!order) {
+      throw new Error(`Checkout order not found for id ${id}`);
+    }
+
+    order.status = "CANCELED";
+    order.updatedAt = new Date().toISOString();
+    pushActivity(state, "Checkout canceled", `Canceled checkout for ${order.appSlug}.`);
+
+    return order;
+  });
+}
+
+export function getOperationsDashboard() {
+  const state = getSessionState();
+  const checkoutOrders = listCheckoutOrders();
+  const openAppReports = state.appReports
+    .filter((report) => report.status === "OPEN")
+    .map((report) => attachAppReport(state, report))
+    .filter((report): report is AppReport & { app: EnrichedApp } => Boolean(report.app));
+  const openDeveloperReports = state.developerReports
+    .filter((report) => report.status === "OPEN")
+    .map((report) => attachDeveloperReport(state, report))
+    .filter(
+      (report): report is DeveloperReport & { developer: NonNullable<ReturnType<typeof getDeveloperBySlugService>> } =>
+        Boolean(report.developer),
+    );
+
+  return {
+    summary: {
+      openReports: openAppReports.length + openDeveloperReports.length,
+      pendingOrders: checkoutOrders.filter((order) => order.status === "PENDING_CONFIRMATION")
+        .length,
+      succeededOrders: checkoutOrders.filter((order) => order.status === "SUCCEEDED")
+        .length,
+      activeSubscriptions: state.activeSubscriptionSlugs.length,
+    },
+    openAppReports,
+    openDeveloperReports,
+    recentOrders: checkoutOrders.slice(0, 8),
+    recentActivity: structuredClone(state.activity).slice(0, 8),
+  };
+}
+
+export function getDeveloperConsoleSnapshot() {
+  const state = getSessionState();
+  const checkoutOrders = state.checkoutOrders;
+
+  return getAllDevelopers().map((developer) => {
+    const apps = listApps({ developerSlug: developer.slug });
+    const openAppReports = state.appReports.filter(
+      (report) =>
+        report.status === "OPEN" &&
+        apps.some((app) => app.slug === report.appSlug),
+    ).length;
+    const openDeveloperReports = state.developerReports.filter(
+      (report) => report.status === "OPEN" && report.developerSlug === developer.slug,
+    ).length;
+    const sales = buildDeveloperSalesSnapshot(checkoutOrders, developer.slug);
+
+    return {
+      developer,
+      apps,
+      monetization: {
+        paidApps: apps.filter((app) => app.priceLabel.startsWith("$")).length,
+        subscriptionApps: apps.filter((app) =>
+          ["premium", "pro", "trial"].some((term) =>
+            app.priceLabel.toLowerCase().includes(term),
+          ),
+        ).length,
+      },
+      inbox: {
+        openAppReports,
+        openDeveloperReports,
+      },
+      sales,
+    };
+  });
 }

@@ -21,7 +21,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               An open source alternative app marketplace.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              href="/developer-console"
+              className="rounded-full bg-white/75 px-4 py-2 text-sm font-medium text-[var(--ink-strong)] shadow-[inset_0_0_0_1px_rgba(19,38,65,0.08)]"
+            >
+              Developer Console
+            </Link>
+            <Link
+              href="/ops-console"
+              className="rounded-full bg-[var(--ink-strong)] px-4 py-2 text-sm font-medium text-white"
+            >
+              Ops Console
+            </Link>
             <Badge>Prototype</Badge>
             <Badge variant="muted">
               <span className="inline-flex items-center gap-1">
