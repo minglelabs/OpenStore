@@ -46,6 +46,8 @@ const entitlementPreviewInputSchema = z.object({
     "CHARGEBACK",
   ]),
   purchasedAt: z.string().datetime(),
+  evaluatedAt: z.string().datetime().optional(),
+  revokedAt: z.string().datetime().optional(),
   subscriptionStatus: z
     .enum(["DRAFT", "ACTIVE", "PAST_DUE", "PAUSED", "CANCELED", "EXPIRED"])
     .optional(),

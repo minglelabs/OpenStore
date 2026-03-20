@@ -18,15 +18,15 @@ describe("resolveCheckoutQuote", () => {
 
     expect(quote.lane).toBe("MARKETPLACE");
     expect(quote.provider).toBe("STRIPE");
-    expect(quote.paymentMethods).toEqual(["CARD", "APPLE_PAY", "GOOGLE_PAY"]);
+    expect(quote.paymentMethods).toEqual(["CARD", "GOOGLE_PAY"]);
     expect(quote.consumerContractVersion).toBe("kr-marketplace-v1");
   });
 
-  it("falls back from merchant-of-record to marketplace when no mor route exists", () => {
+  it("keeps first-party products on the marketplace lane when mor is not requested", () => {
     const quote = resolveCheckoutQuote({
       countryCode: "KR",
       currencyCode: "KRW",
-      platform: "IOS",
+      platform: "WEB",
       productType: "AUTO_RENEWING_SUBSCRIPTION",
       developerType: "FIRST_PARTY",
       preferMerchantOfRecord: false,
@@ -73,6 +73,26 @@ describe("resolveCheckoutQuote", () => {
       "BANCONTACT",
       "SOFORT",
     ]);
+  });
+
+  it("removes platform-incompatible wallets from the checkout quote", () => {
+    const iosQuote = resolveCheckoutQuote({
+      countryCode: "US",
+      currencyCode: "USD",
+      platform: "IOS",
+      productType: "PAID_APP",
+      developerType: "THIRD_PARTY",
+    });
+    const androidQuote = resolveCheckoutQuote({
+      countryCode: "US",
+      currencyCode: "USD",
+      platform: "ANDROID",
+      productType: "PAID_APP",
+      developerType: "THIRD_PARTY",
+    });
+
+    expect(iosQuote.paymentMethods).not.toContain("GOOGLE_PAY");
+    expect(androidQuote.paymentMethods).not.toContain("APPLE_PAY");
   });
 
   it("throws a policy error for unsupported storefront regions", () => {
