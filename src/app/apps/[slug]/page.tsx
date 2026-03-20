@@ -2,10 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Download, ShieldCheck, Star } from "lucide-react";
 
+import {
+  addToWishlistAction,
+  queueInstallAction,
+  removeFromWishlistAction,
+  reportAppAction,
+  submitReviewAction,
+} from "@/app/_actions/store-actions";
 import { AppArtwork } from "@/components/store/app-artwork";
 import { SectionHeading } from "@/components/store/section-heading";
+import { SubmitButton } from "@/components/store/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getCaller } from "@/server/api/server";
 import { formatCompactNumber } from "@/lib/utils";
 
@@ -38,6 +48,17 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
   if (!app) {
     notFound();
   }
+
+  const returnPath = `/apps/${app.slug}`;
+  const needsCheckout =
+    app.priceLabel !== "Free" &&
+    app.status !== "installed" &&
+    app.status !== "queued" &&
+    app.status !== "update";
+  const canQueueInstall =
+    app.priceLabel === "Free" &&
+    (app.status === "available" || app.status === "wishlist");
+  const isWishlisted = app.status === "wishlist";
 
   return (
     <>
@@ -75,9 +96,41 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
               {app.description}
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button>{getPrimaryAction(app.status)}</Button>
-              <Button variant="secondary">Share</Button>
-              <Button variant="outline">Save for later</Button>
+              {needsCheckout ? (
+                <Button asChild>
+                  <Link href={`/checkout/${app.slug}`}>Checkout</Link>
+                </Button>
+              ) : canQueueInstall ? (
+                <form action={queueInstallAction}>
+                  <input name="slug" type="hidden" value={app.slug} />
+                  <input name="returnPath" type="hidden" value={returnPath} />
+                  <SubmitButton pendingLabel="Queueing...">
+                    {getPrimaryAction(app.status)}
+                  </SubmitButton>
+                </form>
+              ) : (
+                <Button disabled>{getPrimaryAction(app.status)}</Button>
+              )}
+              {isWishlisted ? (
+                <form action={removeFromWishlistAction}>
+                  <input name="slug" type="hidden" value={app.slug} />
+                  <input name="returnPath" type="hidden" value={returnPath} />
+                  <SubmitButton pendingLabel="Updating..." variant="secondary">
+                    Remove from wishlist
+                  </SubmitButton>
+                </form>
+              ) : (
+                <form action={addToWishlistAction}>
+                  <input name="slug" type="hidden" value={app.slug} />
+                  <input name="returnPath" type="hidden" value={returnPath} />
+                  <SubmitButton pendingLabel="Saving..." variant="secondary">
+                    Save for later
+                  </SubmitButton>
+                </form>
+              )}
+              <Button asChild variant="outline">
+                <Link href="/library">View library</Link>
+              </Button>
             </div>
           </div>
           <div className="rounded-[32px] border border-white/20 bg-black/12 p-5 text-white/90 backdrop-blur">
@@ -216,6 +269,54 @@ export default async function AppDetailPage({ params }: AppDetailPageProps) {
               </div>
             </div>
           </div>
+
+          <form
+            action={submitReviewAction}
+            className="rounded-[34px] border border-white/40 bg-white/75 p-5 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+          >
+            <SectionHeading title="Write a review" />
+            <input name="appSlug" type="hidden" value={app.slug} />
+            <input name="returnPath" type="hidden" value={returnPath} />
+            <div className="mt-4 space-y-3">
+              <Input name="author" placeholder="Your name" required />
+              <Input name="title" placeholder="Review title" required />
+              <Input
+                defaultValue="5"
+                max="5"
+                min="1"
+                name="rating"
+                required
+                type="number"
+              />
+              <Textarea
+                name="body"
+                placeholder="What worked well or poorly?"
+                required
+              />
+            </div>
+            <SubmitButton className="mt-4" pendingLabel="Submitting...">
+              Submit review
+            </SubmitButton>
+          </form>
+
+          <form
+            action={reportAppAction}
+            className="rounded-[34px] border border-white/40 bg-white/75 p-5 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+          >
+            <SectionHeading title="Report this app" />
+            <input name="appSlug" type="hidden" value={app.slug} />
+            <input name="returnPath" type="hidden" value={returnPath} />
+            <div className="mt-4 space-y-3">
+              <Input name="reason" placeholder="Reason" required />
+              <Textarea
+                name="detail"
+                placeholder="Add any operator context that would help investigation."
+              />
+            </div>
+            <SubmitButton className="mt-4" pendingLabel="Reporting..." variant="outline">
+              Submit report
+            </SubmitButton>
+          </form>
 
           <div className="rounded-[34px] border border-white/40 bg-[var(--ink-strong)] p-5 text-white shadow-[0_16px_40px_rgba(17,28,55,0.14)]">
             <ShieldCheck className="h-5 w-5 text-[#ffcb83]" />

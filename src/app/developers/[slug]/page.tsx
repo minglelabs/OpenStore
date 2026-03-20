@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import { Globe2, ShieldCheck, Verified } from "lucide-react";
 
+import { reportDeveloperAction } from "@/app/_actions/store-actions";
 import { AppRow } from "@/components/store/app-row";
 import { SectionHeading } from "@/components/store/section-heading";
+import { SubmitButton } from "@/components/store/submit-button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { getCaller } from "@/server/api/server";
 
 type DeveloperDetailPageProps = {
@@ -22,6 +26,8 @@ export default async function DeveloperDetailPage({
   if (!developer) {
     notFound();
   }
+
+  const returnPath = `/developers/${developer.slug}`;
 
   return (
     <>
@@ -91,6 +97,24 @@ export default async function DeveloperDetailPage({
               </li>
             </ul>
           </div>
+          <form
+            action={reportDeveloperAction}
+            className="rounded-[30px] border border-white/40 bg-white/75 p-5 shadow-[0_16px_40px_rgba(17,28,55,0.08)]"
+          >
+            <SectionHeading title="Report this developer" />
+            <input name="developerSlug" type="hidden" value={developer.slug} />
+            <input name="returnPath" type="hidden" value={returnPath} />
+            <div className="mt-4 space-y-3">
+              <Input name="reason" placeholder="Reason" required />
+              <Textarea
+                name="detail"
+                placeholder="Share the specific concern for operator review."
+              />
+            </div>
+            <SubmitButton className="mt-4" pendingLabel="Reporting..." variant="outline">
+              Submit developer report
+            </SubmitButton>
+          </form>
         </div>
       </section>
     </>
