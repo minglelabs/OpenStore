@@ -2,6 +2,10 @@
 
 OpenStore is an open source alternative to the Apple App Store.
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 or later (`GPL-3.0-or-later`). See [LICENSE](./LICENSE).
+
 This repository is intended to become a full marketplace product, not only a visual storefront. That means the product scope includes:
 
 - An end-user storefront
