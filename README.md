@@ -575,6 +575,48 @@ The better direction is:
 
 This repository currently contains an initial storefront prototype for the consumer app. It is not yet a complete marketplace product.
 
+## Current API Surface
+
+All currently implemented storefront features are available through the tRPC endpoint at `/api/trpc`.
+
+### Top-level store procedures
+
+- `store.today`
+- `store.discover`
+- `store.charts`
+- `store.search`
+- `store.library`
+- `store.account`
+- `store.appBySlug`
+- `store.developerBySlug`
+- `store.collectionBySlug`
+- `store.categoryBySlug`
+- `store.developerCatalog`
+
+### Nested API groups
+
+- `store.catalog`
+  - catalog summary, app lists, developer lists, category lists, collection lists
+- `store.todayFeed`
+  - hero, spotlight apps, collections, release radar, safety notes
+- `store.discoverFeed`
+  - categories, collections, featured developers, hidden gems, principles
+- `store.appDetail`
+  - sections, screenshots, highlights, what's new, features, privacy, reviews, related items
+- `store.searchTools`
+  - suggestions, trending queries, recent queries, recent query recording
+- `store.libraryTools`
+  - installed apps, updates, queue, wishlist, purchase history, hidden purchases, restore purchases
+  - add to wishlist, remove from wishlist, queue install, pause download, resume download, retry download
+  - hide purchase, unhide purchase
+- `store.accountTools`
+  - notifications, devices, billing, subscriptions, controls
+  - toggle notification, sign out device
+- `store.reviews`
+  - submit review, update review
+- `store.reports`
+  - app reports, developer reports
+
 ## Local Development
 
 1. Install dependencies with `pnpm install`.
