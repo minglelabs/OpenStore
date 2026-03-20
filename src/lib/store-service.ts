@@ -14,6 +14,7 @@ import {
   getAllCategories,
   getChartEntries,
   getChartFeatureChecklist,
+  getChartPreviousOrder,
   getChartViewDefinition,
   getAllCollections,
   getAllDevelopers,
@@ -294,6 +295,7 @@ function getChartMovementDirection(
 
 function buildChartEntries(
   seeds: ChartEntrySeed[],
+  previousOrder: string[],
   categorySlug?: string,
 ): ChartEntry[] {
   const hydrated = seeds
@@ -320,21 +322,20 @@ function buildChartEntries(
     .filter((entry) => !categorySlug || entry.app.category.slug === categorySlug)
     .sort((left, right) => left.seed.rank - right.seed.rank);
 
-  const previousRankBySlug = new Map(
-    hydrated
-      .filter((entry) => entry.seed.previousRank !== null)
-      .sort(
-        (left, right) =>
-          (left.seed.previousRank ?? Number.POSITIVE_INFINITY) -
-          (right.seed.previousRank ?? Number.POSITIVE_INFINITY),
+  const previousCategoryRankBySlug = categorySlug
+    ? new Map(
+        previousOrder
+          .map((slug) => getHydratedAppOrNull(slug))
+          .filter((app): app is EnrichedApp => Boolean(app))
+          .filter((app) => app.category.slug === categorySlug)
+          .map((app, index) => [app.slug, index + 1]),
       )
-      .map((entry, index) => [entry.app.slug, index + 1]),
-  );
+    : null;
 
   return hydrated.map(({ app, seed }, index) => {
     const rank = categorySlug ? index + 1 : seed.rank;
     const previousRank = categorySlug
-      ? (previousRankBySlug.get(app.slug) ?? null)
+      ? (previousCategoryRankBySlug?.get(app.slug) ?? null)
       : seed.previousRank;
     const movement =
       previousRank === null ? 0 : Math.abs(previousRank - rank);
@@ -463,14 +464,16 @@ export function getChartsSnapshot(input: {
   const category = input.categorySlug
     ? getCategoryBySlug(input.categorySlug)
     : null;
+  const previousOrder = getChartPreviousOrder(input.view, input.timeframe);
   const entries = buildChartEntries(
     getChartEntries(input.view, input.timeframe),
+    previousOrder,
     input.categorySlug,
   );
   const limitedEntries =
     typeof input.limit === "number" ? entries.slice(0, input.limit) : entries;
   const biggestMover =
-    limitedEntries
+    entries
       .filter((entry) => entry.movementDirection === "up" && entry.movement > 0)
       .sort((left, right) => right.movement - left.movement)[0] ?? null;
 
@@ -486,7 +489,7 @@ export function getChartsSnapshot(input: {
     featureChecklist: getChartFeatureChecklist(),
     stats: {
       totalApps: entries.length,
-      editorialOverrides: limitedEntries.filter((entry) => entry.editorialBadge).length,
+      editorialOverrides: entries.filter((entry) => entry.editorialBadge).length,
       categoryLabel: category?.name ?? null,
       biggestMover: biggestMover
         ? {

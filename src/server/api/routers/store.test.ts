@@ -83,6 +83,44 @@ describe("storeRouter", () => {
     expect(charts.featureChecklist).toContain("Editorial override labels with visible reasons");
   });
 
+  it("uses the previous category chart baseline when computing movement", async () => {
+    const caller = createCaller();
+    const charts = await caller.store.charts({
+      view: "trending",
+      timeframe: "weekly",
+      categorySlug: "music",
+    });
+
+    expect(charts.entries).toHaveLength(1);
+    expect(charts.entries[0]?.app.slug).toBe("beam-music");
+    expect(charts.entries[0]?.rank).toBe(1);
+    expect(charts.entries[0]?.previousRank).toBe(2);
+    expect(charts.entries[0]?.movement).toBe(1);
+    expect(charts.entries[0]?.movementDirection).toBe("up");
+  });
+
+  it("keeps leaderboard stats stable when the caller limits entry count", async () => {
+    const caller = createCaller();
+    const [fullChart, limitedChart] = await Promise.all([
+      caller.store.charts({
+        view: "trending",
+        timeframe: "weekly",
+      }),
+      caller.store.charts({
+        view: "trending",
+        timeframe: "weekly",
+        limit: 3,
+      }),
+    ]);
+
+    expect(limitedChart.entries).toHaveLength(3);
+    expect(limitedChart.stats.totalApps).toBe(fullChart.stats.totalApps);
+    expect(limitedChart.stats.editorialOverrides).toBe(
+      fullChart.stats.editorialOverrides,
+    );
+    expect(limitedChart.stats.biggestMover).toEqual(fullChart.stats.biggestMover);
+  });
+
   it("returns search results, suggestions, trending queries, and recent queries", async () => {
     const caller = createCaller();
     const [results, suggestions, trending, recordedRecent] = await Promise.all([

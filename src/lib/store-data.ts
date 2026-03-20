@@ -158,6 +158,11 @@ export type ChartViewDefinition = {
   entries: Record<ChartTimeframe, ChartEntrySeed[]>;
 };
 
+type PreviousChartOrderExtra = {
+  slug: string;
+  rank: number;
+};
+
 const developers: DeveloperRecord[] = [
   {
     slug: "northstar-labs",
@@ -2094,6 +2099,19 @@ const chartDefinitions: Record<ChartView, ChartViewDefinition> = {
   },
 };
 
+const chartPreviousOrderExtras: Partial<
+  Record<ChartView, Partial<Record<ChartTimeframe, PreviousChartOrderExtra[]>>>
+> = {
+  trending: {
+    weekly: [
+      {
+        slug: "studio-cast",
+        rank: 5,
+      },
+    ],
+  },
+};
+
 export function getChartFeatureChecklist() {
   return [...chartFeatureChecklist];
 }
@@ -2118,6 +2136,31 @@ export function getCharts(
   return getChartEntries(view, timeframe)
     .map((entry) => getAppBySlug(entry.slug))
     .filter((app): app is EnrichedApp => Boolean(app));
+}
+
+export function getChartPreviousOrder(
+  view: ChartView,
+  timeframe: ChartTimeframe = "weekly",
+) {
+  const seeds = chartDefinitions[view].entries[timeframe];
+  const extras = chartPreviousOrderExtras[view]?.[timeframe] ?? [];
+  const order = [
+    ...seeds
+      .filter((entry) => entry.previousRank !== null)
+      .map((entry) => ({
+        slug: entry.slug,
+        rank: entry.previousRank ?? Number.POSITIVE_INFINITY,
+      })),
+    ...extras,
+  ]
+    .sort((left, right) => left.rank - right.rank)
+    .filter(
+      (entry, index, list) =>
+        list.findIndex((candidate) => candidate.slug === entry.slug) === index,
+    )
+    .map((entry) => entry.slug);
+
+  return structuredClone(order);
 }
 
 export function searchStore(query: string) {
