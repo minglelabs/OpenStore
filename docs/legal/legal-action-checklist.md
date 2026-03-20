@@ -2,6 +2,18 @@
 
 This checklist is a practical preparation list for disputes with Apple related to App Store access, review delay, discriminatory treatment, or exclusionary conduct. It is not legal advice.
 
+## Working Packet in This Repository
+
+Use these documents together instead of treating this checklist as a standalone artifact:
+
+- `README.md`
+- `openstore-product-record.md`
+- `openstore-apple-demand-letter.md`
+- `openstore-kftc-complaint-pack.md`
+- `templates/submission-timeline.csv`
+- `templates/evidence-index.csv`
+- `templates/harm-log.csv`
+
 ## Objective
 
 Build a record that supports one or more of the following:
@@ -193,3 +205,10 @@ Escalate to formal legal action immediately if any of the following occur:
 - Retain or shortlist U.S. and Korean competition counsel.
 - Prepare the Korean complaint pack template and the U.S. regulator pack template now, not after rejection.
 - Keep the Apple notice letter updated with real facts so it can be sent the same day a dispute becomes concrete.
+
+## Status After This Packet Update
+
+- The product record now has an OpenStore-specific baseline in `openstore-product-record.md`.
+- The Apple notice concept now has an OpenStore-specific working draft in `openstore-apple-demand-letter.md`.
+- The Korea Fair Trade Commission preparation work now has a filing packet starter in `openstore-kftc-complaint-pack.md`.
+- Evidence, submission chronology, and harm tracking now have CSV templates in `templates/`.
