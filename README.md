@@ -15,6 +15,7 @@ This repository is intended to become a full marketplace product, not only a vis
 
 - [Global in-app purchase and subscription architecture](docs/architecture/global-payments/README.md)
 - [Global payments implementation checklist](docs/architecture/global-payments/IMPLEMENTATION-CHECKLIST.md)
+- [Apple App Store payment parity plan](docs/architecture/global-payments/APPLE-APP-STORE-PAYMENT-PARITY.md)
 
 ## Repository Language Policy
 

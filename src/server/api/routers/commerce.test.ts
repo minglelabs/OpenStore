@@ -21,11 +21,12 @@ describe("commerceRouter", () => {
 
     expect(quote.lane).toBe("MARKETPLACE");
     expect(quote.paymentMethods).toEqual([
-      "CARD",
+      "STORE_BALANCE",
       "APPLE_PAY",
-      "GOOGLE_PAY",
-      "SEPA_DEBIT",
+      "CARD",
+      "PAYPAL",
     ]);
+    expect(quote.parityGapPaymentMethods).toEqual(["CARRIER_BILLING"]);
   });
 
   it("returns a balanced ledger preview", async () => {

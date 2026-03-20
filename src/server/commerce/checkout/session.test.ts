@@ -14,10 +14,10 @@ describe("buildCheckoutSessionBlueprint", () => {
     });
 
     expect(blueprint.idempotencyKey).toBe(
-      "checkout:order_123:MARKETPLACE:STRIPE",
+      "checkout:order_123:MARKETPLACE:ADYEN",
     );
     expect(blueprint.checkoutSessionRef).toBe(
-      "chk_order_123_stripe-us-marketplace-primary",
+      "chk_order_123_adyen-apac-marketplace-secondary",
     );
   });
 });
