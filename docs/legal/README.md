@@ -6,15 +6,19 @@ This directory contains working legal-preparation drafts for OpenStore. These do
 
 1. `openstore-product-record.md`
    Lock the product description and claim boundaries before anyone writes to Apple or a regulator.
-2. `templates/submission-timeline.csv`
+2. `templates/legal-intake.yaml`
+   Fill the sender, account, submission, and KFTC party fields before editing any external draft.
+3. `send-readiness-checklist.md`
+   Treat this as a hard gate before sending an Apple notice or filing with the KFTC.
+4. `templates/submission-timeline.csv`
    Record every Apple submission, message, and deadline with source-file references.
-3. `templates/evidence-index.csv`
+5. `templates/evidence-index.csv`
    Assign exhibit IDs and keep a citation-ready inventory.
-4. `templates/harm-log.csv`
+6. `templates/harm-log.csv`
    Track competition harm, business harm, and incremental compliance cost.
-5. `openstore-apple-demand-letter.md`
+7. `openstore-apple-demand-letter.md`
    Use for a pre-dispute notice, post-rejection notice, or preservation demand to Apple.
-6. `openstore-kftc-complaint-pack.md`
+8. `openstore-kftc-complaint-pack.md`
    Use as the English source packet for a Korea Fair Trade Commission filing, then translate the final complaint and exhibits into Korean before submission.
 
 ## Current Posture Locked by the Repository
@@ -52,3 +56,10 @@ These workflow references were re-checked on 2026-03-20:
 - Bundle ID, build number, submission date, and App Store Connect screenshots
 - Actual Apple review messages or delay record
 - Korean complainant entity and Korean-language exhibit set
+
+## Required Gate Before External Use
+
+Before external use, complete both:
+
+- `templates/legal-intake.yaml`
+- `send-readiness-checklist.md`

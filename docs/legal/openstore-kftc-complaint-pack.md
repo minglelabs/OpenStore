@@ -38,6 +38,13 @@ The official KFTC consultation line shown on the current site is `1670-0007`.
 
 For an OpenStore dispute where the complainant directly experienced Apple's conduct, the packet should be prepared for `사건신고`, not `사건제보`.
 
+Do not file until:
+
+- `templates/legal-intake.yaml` is complete for complainant, respondent, and Korea nexus fields
+- `templates/evidence-index.csv` assigns exhibit IDs to each cited document
+- `send-readiness-checklist.md` is complete for the KFTC section
+- the final complaint and key exhibits have been translated into Korean
+
 ## Complaint Draft Structure
 
 Use the following as the working English source, then translate and adapt with Korean counsel.
@@ -118,6 +125,14 @@ Keep the relief request practical:
 - Confirm the named respondent and Korean address details
 - Confirm the complainant's signer authority
 - Confirm that the online filing will be made as `사건신고`
+
+## Required Companion Files
+
+- `templates/legal-intake.yaml`
+- `templates/evidence-index.csv`
+- `templates/submission-timeline.csv`
+- `templates/harm-log.csv`
+- `send-readiness-checklist.md`
 
 ## Practical Notes
 

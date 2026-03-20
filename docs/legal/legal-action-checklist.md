@@ -8,6 +8,8 @@ Use these documents together instead of treating this checklist as a standalone 
 
 - `README.md`
 - `openstore-product-record.md`
+- `templates/legal-intake.yaml`
+- `send-readiness-checklist.md`
 - `openstore-apple-demand-letter.md`
 - `openstore-kftc-complaint-pack.md`
 - `templates/submission-timeline.csv`
@@ -209,6 +211,8 @@ Escalate to formal legal action immediately if any of the following occur:
 ## Status After This Packet Update
 
 - The product record now has an OpenStore-specific baseline in `openstore-product-record.md`.
+- The packet now has a structured fact-collection file in `templates/legal-intake.yaml`.
+- The packet now has an explicit send and filing gate in `send-readiness-checklist.md`.
 - The Apple notice concept now has an OpenStore-specific working draft in `openstore-apple-demand-letter.md`.
 - The Korea Fair Trade Commission preparation work now has a filing packet starter in `openstore-kftc-complaint-pack.md`.
 - Evidence, submission chronology, and harm tracking now have CSV templates in `templates/`.

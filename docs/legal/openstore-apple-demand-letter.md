@@ -36,6 +36,12 @@ Fill these fields from source documents before external use:
 - `[Apple Message Dates]`
 - `[Quoted Apple Review Language]`
 
+Do not send this letter until:
+
+- `templates/legal-intake.yaml` is complete for the Apple-related fields
+- `templates/evidence-index.csv` contains exhibit IDs for every cited Apple communication
+- `send-readiness-checklist.md` is complete for the Apple notice section
+
 ## Working Draft
 
 ```text
@@ -147,6 +153,13 @@ Sincerely,
 - Submitted metadata and screenshots
 - Internal product record
 - Evidence index with exhibit IDs
+
+## Required Companion Files
+
+- `templates/legal-intake.yaml`
+- `templates/evidence-index.csv`
+- `templates/submission-timeline.csv`
+- `send-readiness-checklist.md`
 
 ## Official Sources Re-Checked on 2026-03-20
 
