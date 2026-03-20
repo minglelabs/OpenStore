@@ -1,0 +1,57 @@
+service:
+  name: "OpenStore"
+  effective_date: null
+  website_url: null
+  support_url: null
+  app_or_service_posture: "Web-first storefront prototype"
+
+operator:
+  legal_name: null
+  registered_address: null
+  jurisdiction_of_incorporation: null
+
+privacy_contact:
+  email: null
+  mailing_address: null
+  dpo_or_privacy_lead: null
+
+commercial:
+  support_email: null
+  billing_email: null
+  payment_provider_names: []
+
+disputes:
+  governing_law: null
+  forum: null
+  consumer_rights_carveout: "Nothing limits mandatory rights under applicable consumer or privacy law."
+
+children:
+  default_minimum_age: "13 or the higher age required by local law"
+
+operations:
+  hosting_regions: []
+  transfer_regions: []
+  ad_tech_enabled: false
+  marketing_analytics_enabled: false
+
+notes:
+  publication_languages:
+    - en
+    - ko
+    - ja
+    - fr
+    - de
+    - es
+    - it
+    - nl
+    - pl
+    - pt
+    - is
+    - zh-Hans
+    - hi
+    - ar
+    - vi
+    - th
+    - id
+    - fil
+    - ru

@@ -66,6 +66,7 @@ export type AppRecord = {
   searchTags: string[];
   rank: {
     free?: number;
+    paid?: number;
     grossing?: number;
     trending?: number;
   };
@@ -132,6 +133,34 @@ export type EnrichedApp = AppRecord & {
 export type EnrichedCollection = CollectionRecord & {
   apps: EnrichedApp[];
   category?: CategoryRecord;
+};
+
+export type ChartView = "free" | "paid" | "grossing" | "trending";
+export type ChartTimeframe = "daily" | "weekly" | "monthly";
+export type ChartMovementDirection = "up" | "down" | "flat" | "new";
+
+export type ChartEntrySeed = {
+  slug: string;
+  rank: number;
+  previousRank: number | null;
+  highlight: string;
+  editorialBadge?: string;
+  editorialReason?: string;
+};
+
+export type ChartViewDefinition = {
+  label: string;
+  title: string;
+  description: string;
+  rankingHealth: string;
+  methodology: string[];
+  updatedAt: Record<ChartTimeframe, string>;
+  entries: Record<ChartTimeframe, ChartEntrySeed[]>;
+};
+
+type PreviousChartOrderExtra = {
+  slug: string;
+  rank: number;
 };
 
 const developers: DeveloperRecord[] = [
@@ -328,6 +357,7 @@ const apps: AppRecord[] = [
     searchTags: ["writing", "notes", "documents", "workspace"],
     rank: {
       free: 2,
+      grossing: 6,
       trending: 3,
     },
   },
@@ -389,8 +419,9 @@ const apps: AppRecord[] = [
       "Patchboard respects the reality that most teams need clarity, not ceremony.",
     searchTags: ["deploy", "sentry", "infra", "errors", "observability"],
     rank: {
+      paid: 1,
       grossing: 4,
-      trending: 5,
+      trending: 4,
     },
   },
   {
@@ -451,8 +482,9 @@ const apps: AppRecord[] = [
       "Beam feels like someone with excellent taste is quietly programming your day.",
     searchTags: ["audio", "playlists", "radio", "songs", "curation"],
     rank: {
-      free: 7,
-      grossing: 11,
+      free: 5,
+      grossing: 5,
+      trending: 10,
     },
   },
   {
@@ -513,7 +545,8 @@ const apps: AppRecord[] = [
       "Harbor turns email from a stream into a set of deliberate choices.",
     searchTags: ["email", "inbox", "team", "privacy", "communication"],
     rank: {
-      free: 4,
+      free: 1,
+      grossing: 1,
       trending: 2,
     },
   },
@@ -575,8 +608,9 @@ const apps: AppRecord[] = [
       "Lantern succeeds because it feels more like support than discipline.",
     searchTags: ["sleep", "stories", "wellness", "recovery", "breathing"],
     rank: {
-      grossing: 8,
-      trending: 8,
+      free: 3,
+      grossing: 2,
+      trending: 7,
     },
   },
   {
@@ -637,8 +671,8 @@ const apps: AppRecord[] = [
       "Drift explains privacy choices in plain language, which is still surprisingly rare.",
     searchTags: ["browser", "privacy", "web", "tabs", "reader"],
     rank: {
-      free: 12,
-      trending: 6,
+      free: 7,
+      trending: 5,
     },
   },
   {
@@ -699,7 +733,8 @@ const apps: AppRecord[] = [
       "RelayFit is disciplined about staying useful even on your worst calendar days.",
     searchTags: ["fitness", "health", "workout", "mobility", "travel"],
     rank: {
-      grossing: 14,
+      free: 8,
+      grossing: 7,
     },
   },
   {
@@ -760,6 +795,8 @@ const apps: AppRecord[] = [
       "Glyph stands out because its best feature is restraint rather than hype.",
     searchTags: ["ai", "research", "documents", "meeting", "briefs"],
     rank: {
+      free: 6,
+      grossing: 9,
       trending: 1,
     },
   },
@@ -821,9 +858,9 @@ const apps: AppRecord[] = [
       "Arcade Lane proves premium mobile games can still feel generous.",
     searchTags: ["game", "arcade", "premium", "controller", "leaderboard"],
     rank: {
-      free: 18,
-      grossing: 19,
-      trending: 10,
+      paid: 2,
+      grossing: 10,
+      trending: 8,
     },
   },
   {
@@ -884,8 +921,9 @@ const apps: AppRecord[] = [
       "Pocket Cloud wins because it makes sync behavior visible instead of magical.",
     searchTags: ["files", "cloud", "storage", "sync", "backup"],
     rank: {
-      free: 9,
-      grossing: 12,
+      free: 4,
+      grossing: 3,
+      trending: 9,
     },
   },
   {
@@ -946,7 +984,8 @@ const apps: AppRecord[] = [
       "Focus Frame has the restraint that most focus products talk about but never ship.",
     searchTags: ["timer", "focus", "pomodoro", "ambient", "work"],
     rank: {
-      trending: 12,
+      free: 9,
+      trending: 6,
     },
   },
   {
@@ -1007,7 +1046,8 @@ const apps: AppRecord[] = [
       "Studio Cast is small-team software that actually understands small teams.",
     searchTags: ["podcast", "audio", "editing", "publishing", "creator"],
     rank: {
-      grossing: 16,
+      paid: 3,
+      grossing: 8,
     },
   },
 ];
@@ -1340,12 +1380,787 @@ export function getDiscoverFeed() {
   };
 }
 
-export type ChartView = "free" | "grossing" | "trending";
+const chartFeatureChecklist = [
+  "Top Free, Top Paid, Top Grossing, and Trending chart types",
+  "Daily, weekly, and monthly leaderboard windows",
+  "Category-specific chart filtering",
+  "Rank movement indicators with previous placement context",
+  "Editorial override labels with visible reasons",
+  "Exact refresh timestamps and ranking health summaries",
+  "Methodology disclosure for each chart model",
+  "Deep links from charts and category pages into app details",
+];
 
-export function getCharts(view: ChartView) {
-  return getAllApps()
-    .filter((app) => typeof app.rank[view] === "number")
-    .sort((left, right) => (left.rank[view] ?? 999) - (right.rank[view] ?? 999));
+const chartDefinitions: Record<ChartView, ChartViewDefinition> = {
+  free: {
+    label: "Top Free",
+    title: "Free charts that reward durable intent",
+    description:
+      "Free rankings balance install velocity with review quality, retention, and how quickly a launch settles into repeat use.",
+    rankingHealth: "Stable, with editorial lifts constrained to short windows.",
+    methodology: [
+      "Install velocity carries the most weight in the first 24 hours.",
+      "Retention and review quality prevent low-signal spikes from dominating the chart.",
+      "Editorial overrides are temporary and clearly labeled when they exist.",
+    ],
+    updatedAt: {
+      daily: "March 21, 2026 at 09:00 KST",
+      weekly: "March 21, 2026 at 07:30 KST",
+      monthly: "March 20, 2026 at 18:00 KST",
+    },
+    entries: {
+      daily: [
+        {
+          slug: "glyph-ai",
+          rank: 1,
+          previousRank: 6,
+          highlight: "Free trial conversion accelerated after transcript ingestion shipped.",
+        },
+        {
+          slug: "harbor-mail",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Mailbox cleanup rollout kept installs steady while reducing churn.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 3,
+          previousRank: 2,
+          highlight: "Template pins turned editorial traffic into durable installs.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 4,
+          previousRank: 5,
+          highlight: "Pinned offline folders improved search-to-install conversion.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 5,
+          previousRank: 3,
+          highlight: "Recovery trend cards lifted weekend retention.",
+        },
+        {
+          slug: "beam-music",
+          rank: 6,
+          previousRank: 8,
+          editorialBadge: "Editor's Lift",
+          editorialReason: "A late-night listening feature landed in Today's audio story.",
+          highlight: "Ambient channels and curation are pushing Beam back into the mix.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 7,
+          previousRank: 7,
+          highlight: "Permission summaries continue to convert privacy searches.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 8,
+          previousRank: null,
+          editorialBadge: "New & Notable",
+          editorialReason: "Morning planning cards earned a temporary editorial boost.",
+          highlight: "A disciplined timer design is finding a new audience.",
+        },
+        {
+          slug: "relayfit",
+          rank: 9,
+          previousRank: 4,
+          highlight: "Travel-season demand cooled after an earlier spike.",
+        },
+      ],
+      weekly: [
+        {
+          slug: "harbor-mail",
+          rank: 1,
+          previousRank: 2,
+          highlight: "Reliable updates and low uninstall rates keep Harbor ahead.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Download depth and review quality still hold up.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 3,
+          previousRank: 5,
+          highlight: "Family plan retention is giving Lantern a steady climb.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 4,
+          previousRank: 3,
+          highlight: "Share controls and sync clarity are translating into word of mouth.",
+        },
+        {
+          slug: "beam-music",
+          rank: 5,
+          previousRank: 7,
+          highlight: "Playlist programming is keeping Beam sticky without heavy promotion.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 6,
+          previousRank: 8,
+          editorialBadge: "Breakout Update",
+          editorialReason: "Teams adopted the new brief export templates faster than expected.",
+          highlight: "Fast update adoption pushed Glyph into the top tier.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 7,
+          previousRank: 6,
+          highlight: "Privacy explainers continue to convert utility traffic.",
+        },
+        {
+          slug: "relayfit",
+          rank: 8,
+          previousRank: 9,
+          highlight: "Short-session routines are traveling well into spring.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 9,
+          previousRank: 4,
+          highlight: "Focus traffic remains healthy but less explosive than last month.",
+        },
+      ],
+      monthly: [
+        {
+          slug: "northstar-notes",
+          rank: 1,
+          previousRank: 1,
+          highlight: "Northstar still owns the long-view free charts.",
+        },
+        {
+          slug: "harbor-mail",
+          rank: 2,
+          previousRank: 3,
+          highlight: "Harbor's sustained installs keep it close behind.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 3,
+          previousRank: 2,
+          highlight: "Lantern stays durable beyond short-term feature bursts.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 4,
+          previousRank: 5,
+          highlight: "Storage clarity keeps Pocket Cloud growing month over month.",
+        },
+        {
+          slug: "beam-music",
+          rank: 5,
+          previousRank: 6,
+          highlight: "Beam turns editorial listening into steady free installs.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 6,
+          previousRank: 4,
+          highlight: "Privacy demand cooled slightly, but Drift remains durable.",
+        },
+        {
+          slug: "relayfit",
+          rank: 7,
+          previousRank: 8,
+          highlight: "RelayFit keeps a stable long-tail audience in wellness.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 8,
+          previousRank: null,
+          highlight: "Glyph entered the monthly free chart after sustained team adoption.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 9,
+          previousRank: 7,
+          highlight: "Focus Frame is sticking, but at a calmer pace than last cycle.",
+        },
+      ],
+    },
+  },
+  paid: {
+    label: "Top Paid",
+    title: "Premium apps that still convert on merit",
+    description:
+      "Paid charts prioritize completed purchases, refund stability, and session depth after purchase instead of raw page views.",
+    rankingHealth: "Healthy, with refunds low and premium conversion concentrated in a few niches.",
+    methodology: [
+      "Completed purchase conversion matters more than install interest.",
+      "Refund and chargeback stability protect the chart from short-lived spikes.",
+      "Premium depth favors apps that are actively used after the sale, not just impulse buys.",
+    ],
+    updatedAt: {
+      daily: "March 21, 2026 at 09:00 KST",
+      weekly: "March 21, 2026 at 07:30 KST",
+      monthly: "March 20, 2026 at 18:00 KST",
+    },
+    entries: {
+      daily: [
+        {
+          slug: "arcade-lane",
+          rank: 1,
+          previousRank: 2,
+          editorialBadge: "Editor's Lift",
+          editorialReason:
+            "The new Glass City track and controller remapping were featured in gaming coverage.",
+          highlight: "Arcade Lane jumped after its season update landed.",
+        },
+        {
+          slug: "patchboard",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Patchboard still converts well with engineering teams.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 3,
+          previousRank: 3,
+          highlight: "Studio Cast remains steady with creator teams.",
+        },
+      ],
+      weekly: [
+        {
+          slug: "patchboard",
+          rank: 1,
+          previousRank: 1,
+          highlight: "Strong paid conversion and low refunds keep Patchboard on top.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 2,
+          previousRank: 3,
+          highlight: "Fair-play premium design keeps Arcade Lane climbing.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 3,
+          previousRank: 2,
+          highlight: "Studio Cast holds a loyal but smaller paid audience.",
+        },
+      ],
+      monthly: [
+        {
+          slug: "patchboard",
+          rank: 1,
+          previousRank: 2,
+          highlight: "Patchboard wins the long view on purchase intent.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Arcade Lane's surge cooled into a durable second place.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 3,
+          previousRank: 3,
+          highlight: "Creator-team upgrades keep Studio Cast in the chart.",
+        },
+      ],
+    },
+  },
+  grossing: {
+    label: "Top Grossing",
+    title: "Revenue leaders with healthier retention",
+    description:
+      "Grossing charts measure net payer momentum, renewal durability, and monetization quality instead of raw list price.",
+    rankingHealth: "Concentrated at the top, but the middle of the chart is increasingly competitive.",
+    methodology: [
+      "Renewal durability and net payer growth matter more than short-term checkout spikes.",
+      "Revenue quality discounts heavy refund behavior and unstable promotional bursts.",
+      "Editorial overrides are rare and limited to contextual visibility, not permanent rank locks.",
+    ],
+    updatedAt: {
+      daily: "March 21, 2026 at 09:00 KST",
+      weekly: "March 21, 2026 at 07:30 KST",
+      monthly: "March 20, 2026 at 18:00 KST",
+    },
+    entries: {
+      daily: [
+        {
+          slug: "harbor-mail",
+          rank: 1,
+          previousRank: 2,
+          highlight: "Shared inbox upgrades are converting at a high clip.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Lantern's subscriber base is stable even after the promo window.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 3,
+          previousRank: 4,
+          highlight: "Team storage expansions boosted same-day grossing.",
+        },
+        {
+          slug: "patchboard",
+          rank: 4,
+          previousRank: 5,
+          highlight: "Engineering subscriptions remain resilient after the release push.",
+        },
+        {
+          slug: "beam-music",
+          rank: 5,
+          previousRank: 3,
+          highlight: "Premium audio stays strong, but growth cooled slightly.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 6,
+          previousRank: 7,
+          highlight: "Pinned templates nudged more users into paid plans.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 7,
+          previousRank: 8,
+          editorialBadge: "Pro Workflow Spotlight",
+          editorialReason:
+            "A creator workflow story increased team-plan interest.",
+          highlight: "Studio Cast monetization is improving without a huge install spike.",
+        },
+        {
+          slug: "relayfit",
+          rank: 8,
+          previousRank: 6,
+          highlight: "RelayFit renewals remain healthy across partner plans.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 9,
+          previousRank: 10,
+          editorialBadge: "Revenue Watch",
+          editorialReason:
+            "The new audit-friendly exports are attracting higher-value team accounts.",
+          highlight: "Glyph is still early, but team seats are climbing.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 10,
+          previousRank: 9,
+          highlight: "Supporter cosmetics add modest but durable grossing.",
+        },
+      ],
+      weekly: [
+        {
+          slug: "harbor-mail",
+          rank: 1,
+          previousRank: 2,
+          highlight: "Harbor's paid tiers monetize broad, daily use.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Lantern stays close on renewal quality.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 3,
+          previousRank: 4,
+          highlight: "Storage expansion and file history remain strong revenue drivers.",
+        },
+        {
+          slug: "patchboard",
+          rank: 4,
+          previousRank: 5,
+          highlight: "Patchboard's team plan sticks after the release wave.",
+        },
+        {
+          slug: "beam-music",
+          rank: 5,
+          previousRank: 3,
+          highlight: "Beam balances premium audio with a wide free top-of-funnel.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 6,
+          previousRank: 6,
+          highlight: "Northstar's pro conversion remains dependable.",
+        },
+        {
+          slug: "relayfit",
+          rank: 7,
+          previousRank: 8,
+          highlight: "Partner plans keep RelayFit in the upper half.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 8,
+          previousRank: 7,
+          highlight: "Studio Cast monetizes well inside a narrow creator niche.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 9,
+          previousRank: 10,
+          highlight: "Glyph's early team adoption is starting to show in revenue.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 10,
+          previousRank: 9,
+          highlight: "Arcade Lane keeps a respectable paid tail.",
+        },
+      ],
+      monthly: [
+        {
+          slug: "lantern-sleep",
+          rank: 1,
+          previousRank: 1,
+          highlight: "Lantern owns the long-run subscription chart.",
+        },
+        {
+          slug: "harbor-mail",
+          rank: 2,
+          previousRank: 2,
+          highlight: "Harbor remains close thanks to professional inbox teams.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 3,
+          previousRank: 4,
+          highlight: "Pocket Cloud converts durable storage needs into durable revenue.",
+        },
+        {
+          slug: "patchboard",
+          rank: 4,
+          previousRank: 3,
+          highlight: "Release teams spend, but not quite at Harbor or Lantern scale.",
+        },
+        {
+          slug: "beam-music",
+          rank: 5,
+          previousRank: 6,
+          highlight: "Beam's premium listeners are compounding month over month.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 6,
+          previousRank: 5,
+          highlight: "Northstar's paid collaboration seats remain solid.",
+        },
+        {
+          slug: "relayfit",
+          rank: 7,
+          previousRank: 8,
+          highlight: "RelayFit's household plans lift monthly durability.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 8,
+          previousRank: 9,
+          highlight: "Studio Cast monetizes small studios better than most media tools.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 9,
+          previousRank: null,
+          editorialBadge: "New Revenue Entrant",
+          editorialReason:
+            "Team account expansion pulled Glyph into the monthly grossing chart for the first time.",
+          highlight: "Glyph just entered the long-view revenue ranks.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 10,
+          previousRank: 7,
+          highlight: "Arcade Lane is still monetizing, but less than earlier bursts.",
+        },
+      ],
+    },
+  },
+  trending: {
+    label: "Trending",
+    title: "Momentum charts for what is accelerating now",
+    description:
+      "Trending ranks react to search momentum, update adoption, editorial attention, and how fast interest is spreading across the catalog.",
+    rankingHealth: "Volatile by design, with clear labels when editorial coverage is part of the story.",
+    methodology: [
+      "Search momentum and update adoption move faster here than in other charts.",
+      "Editorial coverage can amplify discovery, but every lift is labeled.",
+      "Sustained momentum eventually matters more than a single large spike.",
+    ],
+    updatedAt: {
+      daily: "March 21, 2026 at 09:00 KST",
+      weekly: "March 21, 2026 at 07:30 KST",
+      monthly: "March 20, 2026 at 18:00 KST",
+    },
+    entries: {
+      daily: [
+        {
+          slug: "glyph-ai",
+          rank: 1,
+          previousRank: 3,
+          highlight: "Transcript ingestion and export templates created a fresh demand spike.",
+        },
+        {
+          slug: "harbor-mail",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Harbor remains sticky after its newsletter cleanup release.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 3,
+          previousRank: 6,
+          editorialBadge: "Seasonal Pick",
+          editorialReason:
+            "The gaming team featured Glass City in this week's arcade roundup.",
+          highlight: "Arcade Lane is moving fast after its seasonal content drop.",
+        },
+        {
+          slug: "patchboard",
+          rank: 4,
+          previousRank: 2,
+          highlight: "Engineering teams are actively trialing the latest release inspector.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 5,
+          previousRank: null,
+          editorialBadge: "Editor's Lift",
+          editorialReason: "A Today story on calm planning sent new users into the app.",
+          highlight: "Focus Frame is new to the daily trending chart.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 6,
+          previousRank: 4,
+          highlight: "Website permission controls are driving renewed privacy interest.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 7,
+          previousRank: 5,
+          highlight: "Northstar still trends when structured work tools heat up.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 8,
+          previousRank: 7,
+          highlight: "Pinned folders and upload speed upgrades are generating fresh searches.",
+        },
+        {
+          slug: "studio-cast",
+          rank: 9,
+          previousRank: 8,
+          highlight: "Studio Cast is benefiting from creator workflow chatter.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 10,
+          previousRank: 9,
+          highlight: "Lantern trends steadily, even without a dramatic spike.",
+        },
+      ],
+      weekly: [
+        {
+          slug: "glyph-ai",
+          rank: 1,
+          previousRank: 1,
+          highlight: "Glyph still leads the conversation across work apps.",
+        },
+        {
+          slug: "harbor-mail",
+          rank: 2,
+          previousRank: 3,
+          highlight: "Harbor turned its update into lasting momentum.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 3,
+          previousRank: 2,
+          highlight: "Northstar remains one of the steadiest discovery winners.",
+        },
+        {
+          slug: "patchboard",
+          rank: 4,
+          previousRank: 6,
+          highlight: "Patchboard is rising with every small-team ops release.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 5,
+          previousRank: 4,
+          highlight: "Privacy interest keeps Drift in the top half.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 6,
+          previousRank: 9,
+          editorialBadge: "Editor's Lift",
+          editorialReason:
+            "Editorial coverage turned a quiet timer app into a breakout productivity story.",
+          highlight: "Focus Frame is this week's biggest mover.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 7,
+          previousRank: 5,
+          highlight: "Lantern stays relevant thanks to routine and recovery demand.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 8,
+          previousRank: 7,
+          highlight: "Arcade Lane keeps gaming momentum without heavy monetization tricks.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 9,
+          previousRank: 8,
+          highlight: "Pocket Cloud is gaining from file-cleanup season.",
+        },
+        {
+          slug: "beam-music",
+          rank: 10,
+          previousRank: 10,
+          highlight: "Beam remains on-chart through editorial listening lists.",
+        },
+      ],
+      monthly: [
+        {
+          slug: "harbor-mail",
+          rank: 1,
+          previousRank: 2,
+          highlight: "Harbor owned the month through product quality, not just launch noise.",
+        },
+        {
+          slug: "northstar-notes",
+          rank: 2,
+          previousRank: 1,
+          highlight: "Northstar remains a dependable long-horizon discovery engine.",
+        },
+        {
+          slug: "lantern-sleep",
+          rank: 3,
+          previousRank: 4,
+          highlight: "Lantern sustains interest far beyond its initial feature burst.",
+        },
+        {
+          slug: "glyph-ai",
+          rank: 4,
+          previousRank: null,
+          editorialBadge: "Breakout Month",
+          editorialReason:
+            "Glyph crossed from launch hype into durable team adoption.",
+          highlight: "Glyph entered the monthly trending top tier.",
+        },
+        {
+          slug: "pocket-cloud",
+          rank: 5,
+          previousRank: 6,
+          highlight: "Pocket Cloud built steady momentum across both consumer and team storage use.",
+        },
+        {
+          slug: "patchboard",
+          rank: 6,
+          previousRank: 5,
+          highlight: "Patchboard keeps compounding among small engineering teams.",
+        },
+        {
+          slug: "drift-browser",
+          rank: 7,
+          previousRank: 3,
+          highlight: "Privacy spikes cooled, but Drift still has durable momentum.",
+        },
+        {
+          slug: "beam-music",
+          rank: 8,
+          previousRank: 9,
+          highlight: "Editorial audio coverage kept Beam visible for the month.",
+        },
+        {
+          slug: "arcade-lane",
+          rank: 9,
+          previousRank: 7,
+          highlight: "Arcade Lane held onto momentum after the seasonal spike.",
+        },
+        {
+          slug: "focus-frame",
+          rank: 10,
+          previousRank: 8,
+          highlight: "Focus Frame kept enough lift to stay in the top ten.",
+        },
+      ],
+    },
+  },
+};
+
+const chartPreviousOrderExtras: Partial<
+  Record<ChartView, Partial<Record<ChartTimeframe, PreviousChartOrderExtra[]>>>
+> = {
+  trending: {
+    weekly: [
+      {
+        slug: "studio-cast",
+        rank: 5,
+      },
+    ],
+  },
+};
+
+export function getChartFeatureChecklist() {
+  return [...chartFeatureChecklist];
+}
+
+export function getChartViewDefinition(view: ChartView) {
+  return structuredClone(chartDefinitions[view]);
+}
+
+export function getChartEntries(
+  view: ChartView,
+  timeframe: ChartTimeframe = "weekly",
+) {
+  return structuredClone(chartDefinitions[view].entries[timeframe]).sort(
+    (left, right) => left.rank - right.rank,
+  );
+}
+
+export function getCharts(
+  view: ChartView,
+  timeframe: ChartTimeframe = "weekly",
+) {
+  return getChartEntries(view, timeframe)
+    .map((entry) => getAppBySlug(entry.slug))
+    .filter((app): app is EnrichedApp => Boolean(app));
+}
+
+export function getChartPreviousOrder(
+  view: ChartView,
+  timeframe: ChartTimeframe = "weekly",
+) {
+  const seeds = chartDefinitions[view].entries[timeframe];
+  const extras = chartPreviousOrderExtras[view]?.[timeframe] ?? [];
+  const order = [
+    ...seeds
+      .filter((entry) => entry.previousRank !== null)
+      .map((entry) => ({
+        slug: entry.slug,
+        rank: entry.previousRank ?? Number.POSITIVE_INFINITY,
+      })),
+    ...extras,
+  ]
+    .sort((left, right) => left.rank - right.rank)
+    .filter(
+      (entry, index, list) =>
+        list.findIndex((candidate) => candidate.slug === entry.slug) === index,
+    )
+    .map((entry) => entry.slug);
+
+  return structuredClone(order);
 }
 
 export function searchStore(query: string) {

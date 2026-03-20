@@ -2,6 +2,10 @@
 
 OpenStore is an open source alternative to the Apple App Store.
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 or later (`GPL-3.0-or-later`). See [LICENSE](./LICENSE).
+
 This repository is intended to become a full marketplace product, not only a visual storefront. That means the product scope includes:
 
 - An end-user storefront
@@ -117,11 +121,16 @@ Show ranking-based discovery without letting ranking become the entire product.
 ### Features
 
 - Switch between chart types
+- Support Top Free, Top Paid, Top Grossing, and Trending views
 - Category-specific charts
 - Time-range filters
 - Ranking explanation
 - Editorial override labels
 - Ranking movement indicators
+- Exact refresh timestamps
+- Previous-rank context
+- Ranking health summary
+- Feature inventory for leaderboard capabilities
 - Deep links into app detail pages
 
 ## 4. Search Tab

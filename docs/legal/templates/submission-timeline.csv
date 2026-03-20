@@ -1,0 +1,4 @@
+event_date,event_time_utc,local_timezone,actor,channel,event_type,bundle_id,build_number,apple_rule_or_term,message_summary,source_file,next_deadline,notes
+YYYY-MM-DD,00:00:00,Asia/Seoul,Company,App Store Connect,submission,,,,"Initial submission",,,
+YYYY-MM-DD,00:00:00,Asia/Seoul,Apple,Resolution Center,review_message,,,,"Apple review message",,,
+YYYY-MM-DD,00:00:00,Asia/Seoul,Company,Resolution Center,response,,,,"Company response",,,

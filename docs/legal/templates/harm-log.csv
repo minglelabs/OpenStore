@@ -1,0 +1,4 @@
+record_date,harm_type,description,estimated_amount_usd,affected_party,evidence_file,competition_impact,notes
+YYYY-MM-DD,launch_delay,Launch date slipped due to Apple review event,,OpenStore,,Reduced timing for market entry,
+YYYY-MM-DD,engineering_cost,Additional engineering or compliance work caused by Apple position,,OpenStore,,Raised entry cost,
+YYYY-MM-DD,partner_loss,Developer or partner opportunity affected by delay,,OpenStore,,Reduced developer choice,

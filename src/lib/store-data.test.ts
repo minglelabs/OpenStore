@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getChartFeatureChecklist,
   getAppBySlug,
   getCharts,
   getLibrarySnapshot,
@@ -25,6 +26,15 @@ describe("store-data", () => {
     expect(trending[0]?.slug).toBe("glyph-ai");
     expect(ranks).toEqual([...ranks].sort((left, right) => (left ?? 0) - (right ?? 0)));
     expect(trending.every((app) => typeof app.rank.trending === "number")).toBe(true);
+  });
+
+  it("exposes paid charts and the leaderboard feature checklist", () => {
+    const paid = getCharts("paid");
+    const features = getChartFeatureChecklist();
+
+    expect(paid[0]?.slug).toBe("patchboard");
+    expect(paid.every((app) => typeof app.rank.paid === "number")).toBe(true);
+    expect(features).toContain("Category-specific chart filtering");
   });
 
   it("searches apps, developers, and categories case-insensitively", () => {

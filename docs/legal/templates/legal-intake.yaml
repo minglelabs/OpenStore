@@ -1,0 +1,56 @@
+# Fill this file before sending any Apple notice or filing any KFTC complaint.
+# Keep unknown values as null. Do not replace unknowns with guesses.
+
+sender:
+  legal_name: null
+  signer_name: null
+  signer_title: null
+  address: null
+  email: null
+  phone: null
+
+product:
+  app_name: "OpenStore"
+  bundle_id: null
+  repository_version: "0.1.0"
+  current_posture: "Initial storefront prototype"
+
+apple_developer:
+  account_holder_name: null
+  account_identifier: null
+  team_id: null
+
+submission:
+  status: null
+  submission_date: null
+  build_number: null
+  review_message_dates: []
+  quoted_review_language: []
+  cited_guidelines: []
+
+apple_notice:
+  response_deadline_business_days: 10
+  send_channels:
+    - courier
+    - email
+    - app_store_connect
+  final_pdf_filename: null
+  final_send_date: null
+
+kftc:
+  complainant_entity: null
+  respondent_entities: []
+  korea_nexus_facts: []
+  filing_path: "사건신고"
+  korean_translation_complete: false
+  signer_authority_confirmed: false
+
+approval:
+  internal_approver: null
+  external_counsel: null
+  approved_for_send: false
+
+evidence:
+  evidence_index_version: null
+  timeline_version: null
+  harm_log_version: null
