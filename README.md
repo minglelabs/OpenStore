@@ -581,3 +581,23 @@ This repository currently contains an initial storefront prototype for the consu
 2. Copy `.env.example` to `.env`.
 3. Set `DATABASE_URL`.
 4. Run `pnpm dev`.
+
+## Testing and TDD
+
+Use the following scripts to keep development test-first:
+
+- `pnpm test` runs the full test suite once
+- `pnpm test:tdd` starts watch mode for red-green-refactor loops
+- `pnpm test:coverage` generates coverage output
+
+The current test stack is:
+
+- Vitest
+- React Testing Library
+- jsdom
+
+The current baseline test coverage focuses on:
+
+- Store domain data and derived view models
+- tRPC store router behavior
+- Representative storefront component rendering
