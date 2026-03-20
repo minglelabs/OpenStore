@@ -1,0 +1,7 @@
+exhibit_id,category,description,source_system,owner,date_captured,file_path,hash_sha256,translation_status,privilege_or_sensitivity,citation_notes
+EX-001,corporate,Complainant corporate registration,corporate records,,YYYY-MM-DD,,,not_started,confidential,
+EX-002,product,OpenStore product record,repository,,YYYY-MM-DD,,,not_started,internal,
+EX-003,apple_submission,App Store Connect submission history,App Store Connect,,YYYY-MM-DD,,,not_started,confidential,
+EX-004,apple_message,Resolution Center message,App Store Connect,,YYYY-MM-DD,,,not_started,confidential,
+EX-005,guideline,Apple guideline excerpt,Apple Developer,,YYYY-MM-DD,,,not_started,public,
+EX-006,harm,Launch or partnership harm evidence,internal/email,,YYYY-MM-DD,,,not_started,confidential,
