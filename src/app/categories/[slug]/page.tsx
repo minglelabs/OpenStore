@@ -22,6 +22,12 @@ export default async function CategoryDetailPage({
     notFound();
   }
 
+  const categoryChart = await caller.store.charts({
+    view: "trending",
+    timeframe: "weekly",
+    categorySlug: slug,
+    limit: 3,
+  });
   const featuredApps = [...category.apps]
     .sort((left, right) => right.rating - left.rating)
     .slice(0, 3);
@@ -58,6 +64,30 @@ export default async function CategoryDetailPage({
               <li key={item}>{item}</li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeading
+          eyebrow="Category Charts"
+          title={`Leading apps in ${category.name}`}
+          description="Every category should expose its own leaderboard context, not only a giant store-wide chart."
+          href={`/charts?view=trending&timeframe=weekly&category=${category.slug}`}
+          action="Open full chart"
+        />
+        <div className="grid gap-4">
+          {categoryChart.entries.map((entry) => (
+            <AppRow
+              key={entry.app.slug}
+              app={entry.app}
+              rank={entry.rank}
+              compact
+              chartNote={entry.highlight}
+              movement={entry.movement}
+              movementDirection={entry.movementDirection}
+              editorialBadge={entry.editorialBadge}
+            />
+          ))}
         </div>
       </section>
 

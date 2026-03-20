@@ -117,11 +117,16 @@ Show ranking-based discovery without letting ranking become the entire product.
 ### Features
 
 - Switch between chart types
+- Support Top Free, Top Paid, Top Grossing, and Trending views
 - Category-specific charts
 - Time-range filters
 - Ranking explanation
 - Editorial override labels
 - Ranking movement indicators
+- Exact refresh timestamps
+- Previous-rank context
+- Ranking health summary
+- Feature inventory for leaderboard capabilities
 - Deep links into app detail pages
 
 ## 4. Search Tab

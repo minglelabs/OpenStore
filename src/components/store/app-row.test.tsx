@@ -27,4 +27,24 @@ describe("AppRow", () => {
 
     expect(screen.getByText("Write, sort, and connect your thinking.")).toBeInTheDocument();
   });
+
+  it("renders leaderboard metadata when movement and editorial context are provided", () => {
+    render(
+      <AppRow
+        app={app}
+        rank={1}
+        compact
+        chartNote="Template pins turned editorial traffic into durable installs."
+        movement={3}
+        movementDirection="up"
+        editorialBadge="Breakout Update"
+      />,
+    );
+
+    expect(screen.getByText("Up 3")).toBeInTheDocument();
+    expect(screen.getByText("Breakout Update")).toBeInTheDocument();
+    expect(
+      screen.getByText("Template pins turned editorial traffic into durable installs."),
+    ).toBeInTheDocument();
+  });
 });

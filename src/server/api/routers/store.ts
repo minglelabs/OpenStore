@@ -116,7 +116,8 @@ function requireAppDetailSections(
 }
 
 const chartInputSchema = z.object({
-  view: z.enum(["free", "grossing", "trending"]),
+  view: z.enum(["free", "paid", "grossing", "trending"]),
+  timeframe: z.enum(["daily", "weekly", "monthly"]).default("weekly"),
   categorySlug: z.string().optional(),
   limit: z.number().int().positive().max(100).optional(),
 });
