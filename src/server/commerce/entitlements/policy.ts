@@ -20,6 +20,8 @@ export type EntitlementPreviewInput = {
   productType: ProductType;
   orderStatus: OrderStatus;
   purchasedAt: string;
+  evaluatedAt?: string;
+  revokedAt?: string;
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   gracePeriodEndsAt?: string;
@@ -40,10 +42,12 @@ function isRecurringProduct(productType: ProductType) {
 export function previewEntitlement(
   input: EntitlementPreviewInput,
 ): EntitlementPreview {
+  const evaluatedAt = input.evaluatedAt ?? input.purchasedAt;
+
   if (input.orderStatus === "REFUNDED" || input.orderStatus === "CHARGEBACK") {
     return {
       status: "REVOKED",
-      revokedAt: input.purchasedAt,
+      revokedAt: input.revokedAt ?? evaluatedAt,
       reason: "The purchase was refunded or charged back.",
     };
   }
@@ -75,7 +79,7 @@ export function previewEntitlement(
   if (
     input.subscriptionStatus === "PAST_DUE" &&
     input.gracePeriodEndsAt &&
-    new Date(input.gracePeriodEndsAt).getTime() > Date.now()
+    new Date(input.gracePeriodEndsAt).getTime() > new Date(evaluatedAt).getTime()
   ) {
     return {
       status: "ACTIVE",

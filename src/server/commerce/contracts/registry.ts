@@ -397,6 +397,20 @@ function getEligiblePaymentMethods(route: PspRoute, productType: ProductType) {
   return route.recurringPaymentMethods;
 }
 
+function filterMethodsForPlatform(
+  paymentMethods: PaymentMethodType[],
+  platform: CheckoutPlatform,
+) {
+  switch (platform) {
+    case "IOS":
+      return paymentMethods.filter((method) => method !== "GOOGLE_PAY");
+    case "ANDROID":
+      return paymentMethods.filter((method) => method !== "APPLE_PAY");
+    default:
+      return paymentMethods;
+  }
+}
+
 function selectRouteForLane(
   lane: CommerceLane,
   input: CheckoutQuoteInput,
@@ -408,13 +422,30 @@ function selectRouteForLane(
 
   for (const route of sortRoutes(candidates, input.preferredProvider)) {
     const account = getAccount(route.merchantAccountKey, registry);
-    const eligibleMethods = getEligiblePaymentMethods(route, input.productType);
+    const recurringEligibleMethods = getEligiblePaymentMethods(
+      route,
+      input.productType,
+    );
+    const eligibleMethods = filterMethodsForPlatform(
+      recurringEligibleMethods,
+      input.platform,
+    );
 
     if (!account || eligibleMethods.length === 0) {
       continue;
     }
 
-    return { route, account, eligibleMethods };
+    return {
+      route,
+      account,
+      eligibleMethods,
+      recurringSuppressedMethods: route.paymentMethods.filter(
+        (method) => !recurringEligibleMethods.includes(method),
+      ),
+      platformSuppressedMethods: recurringEligibleMethods.filter(
+        (method) => !eligibleMethods.includes(method),
+      ),
+    };
   }
 
   return null;
@@ -459,14 +490,29 @@ export function resolveCheckoutQuote(
     );
   }
 
-  const { route, account, eligibleMethods } = selection;
+  const {
+    route,
+    account,
+    eligibleMethods,
+    recurringSuppressedMethods,
+    platformSuppressedMethods,
+  } = selection;
   const suppressedPaymentMethods = route.paymentMethods.filter(
     (method) => !eligibleMethods.includes(method),
   );
 
-  if (input.productType === "AUTO_RENEWING_SUBSCRIPTION" && suppressedPaymentMethods.length) {
+  if (
+    input.productType === "AUTO_RENEWING_SUBSCRIPTION" &&
+    recurringSuppressedMethods.length
+  ) {
     warnings.push(
-      `Recurring billing suppressed one-time methods: ${suppressedPaymentMethods.join(", ")}.`,
+      `Recurring billing suppressed one-time methods: ${recurringSuppressedMethods.join(", ")}.`,
+    );
+  }
+
+  if (platformSuppressedMethods.length) {
+    warnings.push(
+      `Platform filtering removed unsupported payment methods for ${input.platform}: ${platformSuppressedMethods.join(", ")}.`,
     );
   }
 
