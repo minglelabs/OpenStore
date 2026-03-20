@@ -2,151 +2,582 @@
 
 OpenStore is an open source alternative to the Apple App Store.
 
-This repository currently ships a mobile-first web prototype built with TypeScript, Next.js, Tailwind CSS, shadcn-style UI primitives, tRPC, and a PostgreSQL-ready Prisma schema.
+This repository is intended to become a full marketplace product, not only a visual storefront. That means the product scope includes:
 
-## Product Direction
+- An end-user storefront
+- Account, billing, and library management
+- Install and update flows
+- Reviews, trust, and reporting flows
+- A developer console
+- An internal operations and moderation console
 
-The recommended direction is:
+## Repository Language Policy
 
-- Build the product as a responsive React web app first.
-- Wrap it with a thin native shell later only for device capabilities that genuinely require native access.
-- Avoid a pure WebView-first product architecture for the long term because store-quality flows eventually need stronger control over downloads, system permissions, notifications, background activity, install state, and platform integrations.
+Everything in this repository must be written in English:
 
-This means the current implementation focuses on a strong mobile web storefront with clean seams for a future React Native or native shell.
+- Commit messages
+- README and docs
+- Code comments
+- UI copy
+- PR titles
 
-## Core Tabs
+## Product Inventory
 
-### Today
+This section lists the tabs, screens, and features the product should eventually include.
 
-- Editorial hero story
-- Release radar
-- Featured apps
+### Global Navigation Tabs
+
+The consumer app should use these primary tabs:
+
+1. Today
+2. Discover
+3. Charts
+4. Search
+5. Library
+6. Account
+
+## 1. Today Tab
+
+### Goal
+
+Use editorial curation to explain why apps matter, not only which apps are popular.
+
+### Screens
+
+- Today Home
+- Story Detail
+- New Releases Hub
+- Editorial Collection Detail
+- App Detail
+- Developer Detail
+
+### Features
+
+- Hero story card
+- Daily editorial stories
+- Featured app modules
 - Curated collections
-- Store trust and safety overview
+- New release highlights
+- Major update highlights
+- Trust and safety callouts
+- Deep links into app detail pages
+- Deep links into developer pages
 
-### Discover
+## 2. Discover Tab
 
-- Category browser
-- Collection browser
+### Goal
+
+Help users browse the catalog by category, use case, theme, and editorial grouping.
+
+### Screens
+
+- Discover Home
+- Categories Index
+- Category Detail
+- Collections Index
+- Collection Detail
+- Featured Developers
+- Developer Detail
+- App Detail
+
+### Features
+
+- Category browse
+- Use-case browse
+- Editorial collections
+- Seasonal collections
 - Featured developers
-- Hidden gems and editorial picks
-- Product principles and platform positioning
+- Hidden gems section
+- Recently updated apps
+- Staff picks
+- Filter by category and pricing model
 
-### Top Charts
+## 3. Charts Tab
 
-- Top free ranking
-- Top grossing ranking
-- Trending ranking
-- Ranking explanation card
+### Goal
 
-### Search
+Show ranking-based discovery without letting ranking become the entire product.
 
-- Search input and query state
-- App results
-- Developer results
-- Category results
-- Trending search shortcuts
+### Screens
 
-### Library
+- Charts Home
+- Top Free
+- Top Paid
+- Top Grossing
+- Trending
+- Category Charts
+- Ranking Methodology Sheet
 
-- Installed apps
-- Available updates
-- Active download queue
+### Features
+
+- Switch between chart types
+- Category-specific charts
+- Time-range filters
+- Ranking explanation
+- Editorial override labels
+- Ranking movement indicators
+- Deep links into app detail pages
+
+## 4. Search Tab
+
+### Goal
+
+Help users find apps, developers, and categories quickly, even when the query is vague.
+
+### Screens
+
+- Search Landing
+- Search Suggestions
+- Search Results
+- Search Filters Sheet
+- No Results State
+- Recent Searches Manager
+
+### Features
+
+- Instant search suggestions
+- Trending searches
+- Recent searches
+- Search results for apps
+- Search results for developers
+- Search results for categories
+- Filter by category
+- Filter by pricing model
+- Filter by rating
+- Sort by relevance, popularity, rating, and recency
+
+## 5. Library Tab
+
+### Goal
+
+Turn store ownership into a clear operational experience after acquisition.
+
+### Screens
+
+- Library Home
+- Installed Apps
+- Updates
+- Download Queue
 - Wishlist
-- Recent activity
+- Purchase History
+- Hidden Purchases
+- Restore Purchases
 
-### Account
+### Features
 
-- Profile summary
-- Notification settings
-- Trusted devices
-- Billing overview
-- Security and parental control settings
+- Installed app list
+- Update available list
+- Background update status
+- Download progress tracking
+- Pause and resume downloads
+- Failed download retry
+- Wishlist management
+- Purchase restore
+- Redownload previously owned apps
+- Hide and unhide purchases
+- Open installed app
 
-## Detail Screens
+## 6. Account Tab
+
+### Goal
+
+Centralize profile, devices, billing, preferences, and security.
+
+### Screens
+
+- Account Home
+- Profile
+- Region and Language
+- Payment Methods
+- Billing History
+- Subscription Management
+- Notification Settings
+- Device Management
+- Security Settings
+- Family and Parental Controls
+- Support and Help
+- Report a Problem
+
+### Features
+
+- View and edit profile
+- Change region
+- Manage payment methods
+- View invoices and receipts
+- Manage subscriptions
+- Notification preferences
+- Trusted device list
+- Sign out of device
+- Purchase authentication settings
+- Family sharing controls
+- Content restrictions
+- Contact support
+- Refund request flow
+
+## Shared Consumer Screens
+
+These screens are shared across tabs and should exist regardless of where the user enters from.
 
 ### App Detail
 
-- Hero header
-- Install or update call to action
-- Rating, downloads, size, and version metadata
+#### Sections
+
+- App hero header
+- App icon and gallery
+- Price or acquisition status
+- Install or update CTA
+- Rating summary
+- Rating distribution
+- Review highlights
 - Screenshots
-- Highlights
-- What's new
+- Video preview
+- What is new
+- Description
 - Feature list
-- Review list
-- Permissions and privacy summary
-- In-app purchase summary
-- Links to developer and category pages
+- Compatibility
+- Version history
+- Privacy summary
+- Permissions summary
+- Developer profile link
+- Related apps
+- Related collections
+- Report app action
+
+#### Features
+
+- Install
+- Update
+- Open
+- Add to wishlist
+- Share
+- Write review
+- Edit review
+- Report issue
+- View privacy details
+- View permissions details
 
 ### Developer Detail
 
-- Verified developer summary
-- Trust indicators
-- Portfolio list
-- Category focus
+#### Sections
+
+- Developer profile header
+- Verification status
+- Region
+- Website and support links
+- Published apps
+- App categories
+- Review response summary
+
+#### Features
+
+- Follow developer
+- Browse published apps
+- Report developer
+- Open support links
 
 ### Collection Detail
 
-- Curated collection hero
-- Editorial notes
-- Included app list
+#### Sections
+
+- Collection hero
+- Editorial description
+- Curator identity
+- Included apps
+- Related collections
+
+#### Features
+
+- Save collection
+- Share collection
+- Open apps in sequence
 
 ### Category Detail
 
-- Category summary
+#### Sections
+
+- Category overview
 - Featured apps
-- Buying guidance
-- Full category browse list
+- Category charts
+- Buying guide
+- Full app list
 
-## Features Implemented In This Prototype
+#### Features
 
-- Mobile-first store shell with persistent bottom navigation
-- Rich storefront UI for all core tabs
-- Dedicated routes for app, developer, collection, and category pages
-- Mock product data powering the whole interface
-- tRPC router for storefront queries
-- Prisma schema prepared for PostgreSQL
-- Tailwind styling with reusable shadcn-style components
+- Filter within category
+- Sort within category
+- Open category charts
 
-## Screen Inventory
+## Acquisition, Install, and Update Flows
 
-### Main navigation screens
+These flows are essential for an app store alternative and should not be treated as secondary UI work.
 
-- `/today`
-- `/discover`
-- `/charts`
-- `/search`
-- `/library`
-- `/account`
+### Screens
 
-### Secondary screens
+- Install Confirmation Sheet
+- Compatibility Check Screen
+- Device Selection Sheet
+- Storage Warning Sheet
+- Download Progress Screen
+- Update Notes Sheet
+- Queue Management Screen
+- Error and Retry Screen
 
-- `/apps/[slug]`
-- `/developers/[slug]`
-- `/collections/[slug]`
-- `/categories/[slug]`
+### Features
 
-## Tech Stack
+- Compatibility checks
+- Version compatibility checks
+- Storage checks
+- Battery and network checks
+- Queue management
+- Pause and resume
+- Retry failed installs
+- Wi-Fi-only downloads
+- Auto-update settings
+- Delta update support
+- Rollback strategy for failed updates
 
-- TypeScript
-- Next.js App Router
-- Tailwind CSS
-- shadcn-style component patterns
-- tRPC
-- Prisma
-- PostgreSQL-ready schema
+## Ratings, Reviews, and Social Proof
+
+### Screens
+
+- Review List
+- Write Review
+- Edit Review
+- Rating Breakdown
+- Developer Response View
+
+### Features
+
+- Star rating
+- Written review submission
+- Review editing
+- Review reporting
+- Helpful vote
+- Sort reviews by recent, critical, and favorable
+- Developer responses
+
+## Notifications and Messaging
+
+### Screens
+
+- Notification Center
+- Notification Preferences
+- Transactional Message Detail
+
+### Features
+
+- Download completion alerts
+- Update alerts
+- Price drop alerts
+- Editorial recommendation alerts
+- Billing alerts
+- Security alerts
+
+## Trust, Safety, and Compliance
+
+### Screens
+
+- App Report Form
+- Developer Report Form
+- Privacy Details
+- Permission Details
+- Age Rating Details
+- Content Warning Screen
+
+### Features
+
+- App reporting
+- Developer reporting
+- Abuse reporting
+- Visible developer identity
+- Visible pricing model
+- Privacy label display
+- Permission explanations
+- Age rating display
+- Content warnings
+
+## Developer Console
+
+The product also needs a separate developer-facing application.
+
+### Core Screens
+
+- Developer Dashboard
+- App List
+- Create App
+- App Listing Editor
+- Release Management
+- Binary or Package Upload
+- Version Detail
+- Pricing and Availability
+- In-App Purchase Management
+- Subscription Management
+- Review Management
+- Analytics Dashboard
+- Crash and Quality Dashboard
+- Team and Permissions
+- Payout and Tax Setup
+- Compliance and Policy Center
+
+### Core Features
+
+- Create and manage app records
+- Upload build artifacts
+- Manage versions
+- Publish and schedule releases
+- Localize app metadata
+- Manage screenshots and preview media
+- Set pricing
+- Configure regional availability
+- Configure in-app purchases
+- Configure subscriptions
+- Read and respond to reviews
+- View installs, retention, and revenue analytics
+- Manage team roles
+- Manage payout setup
+- Handle policy and compliance submissions
+
+## Internal Operations and Moderation Console
+
+The store also needs an internal back-office application.
+
+### Core Screens
+
+- App Review Queue
+- Developer Verification Queue
+- Abuse Reports Queue
+- Billing Support Queue
+- Refund Queue
+- Editorial CMS
+- Category Manager
+- Collection Manager
+- Ranking and Search Tuning
+- Incident Dashboard
+
+### Core Features
+
+- Review app submissions
+- Verify developer identity
+- Moderate reports
+- Process refunds
+- Manage editorial stories
+- Manage collections and categories
+- Tune ranking signals
+- Tune search relevance
+- Track operational incidents
+
+## Cross-Cutting System Features
+
+These are not individual screens, but they are product-critical.
+
+### Identity and Access
+
+- User authentication
+- Session management
+- Device trust management
+- Family account support
+- Developer organization support
+- Admin role management
+
+### Commerce
+
+- Paid apps
+- In-app purchases
+- Auto-renewing subscriptions
+- Refund flow
+- Receipt history
+- Regional pricing
+
+### Store Intelligence
+
+- Search indexing
+- Ranking pipelines
+- Editorial scheduling
+- Recommendation modules
+- Fraud and abuse detection
+
+### Platform Services
+
+- Background jobs
+- Asset processing
+- Review moderation pipeline
+- Notification delivery
+- Analytics ingestion
+- Audit logs
+
+## Recommended Scope Order
+
+The recommended order is:
+
+### Phase 1: Consumer MVP
+
+- Today
+- Discover
+- Charts
+- Search
+- Library
+- Account
+- App detail
+- Developer detail
+- Collection detail
+- Category detail
+
+### Phase 2: Real Acquisition and Ownership Flows
+
+- Install flow
+- Update flow
+- Queue management
+- Purchase history
+- Restore purchases
+- Notification center
+
+### Phase 3: Developer Platform
+
+- Developer dashboard
+- App listing management
+- Release management
+- Pricing management
+- Analytics
+
+### Phase 4: Internal Operations
+
+- Review queue
+- Moderation tools
+- Editorial CMS
+- Refund and billing tooling
+
+## Architecture Direction
+
+The recommended architecture is:
+
+- Build the product as a responsive React web app first
+- Use TypeScript, Tailwind CSS, shadcn-style components, tRPC, Prisma, and PostgreSQL
+- Add a native wrapper later only for device-specific capabilities such as installs, downloads, notifications, and deeper platform integration
+
+### Why not a pure WebView-first product
+
+A pure WebView-first approach is fast for a demo, but weak for a real store because the product will eventually require:
+
+- Device-level install handling
+- Download queue control
+- Background tasks
+- Push notifications
+- Storage management
+- Purchase and entitlement handling
+- Device trust management
+
+The better direction is:
+
+- Web-first for speed and iteration
+- Native shell later for platform-critical capabilities
+
+## Current Repository Status
+
+This repository currently contains an initial storefront prototype for the consumer app. It is not yet a complete marketplace product.
 
 ## Local Development
 
 1. Install dependencies with `pnpm install`.
 2. Copy `.env.example` to `.env`.
-3. Set `DATABASE_URL` for PostgreSQL when you are ready to connect a real database.
+3. Set `DATABASE_URL`.
 4. Run `pnpm dev`.
-
-## Next Product Steps
-
-- Replace mock storefront data with Prisma-backed queries.
-- Add authentication and user-specific library persistence.
-- Add native shell integration only for device-specific capabilities.
-- Implement real download, payment, and review submission flows.
