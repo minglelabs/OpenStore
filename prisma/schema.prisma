@@ -781,10 +781,12 @@ enum InvoiceStatus {
 }
 
 enum PaymentMethodType {
+  STORE_BALANCE
   CARD
   APPLE_PAY
   GOOGLE_PAY
   PAYPAL
+  CARRIER_BILLING
   ACH_DEBIT
   SEPA_DEBIT
   IDEAL
@@ -792,6 +794,24 @@ enum PaymentMethodType {
   SOFORT
   ALIPAY
   WECHAT_PAY
+  DOUYIN_PAY
+  UPI
+  EPS_TOPUP
+  NET_BANKING_TOPUP
+  MERPAY
+  PAYPAY
+  KAKAOPAY
+  NAVER_PAY
+  PAYCO
+  TOSS_PAY
+  MOMO
+  SHOPEEPAY
+  VNPAY
+  ZALOPAY
+  DANA
+  GOPAY
+  GCASH
+  TRUEMONEY
 }
 
 enum PaymentInstrumentType {

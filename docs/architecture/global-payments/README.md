@@ -566,3 +566,4 @@ That architecture keeps OpenStore flexible enough to operate like an app store r
 ## Related Docs
 
 - [Implementation checklist](./IMPLEMENTATION-CHECKLIST.md)
+- [Apple App Store payment parity plan](./APPLE-APP-STORE-PAYMENT-PARITY.md)

@@ -1,10 +1,12 @@
 export const commerceLanes = ["MARKETPLACE", "MERCHANT_OF_RECORD"] as const;
 export const paymentProviders = ["STRIPE", "ADYEN", "PADDLE"] as const;
 export const paymentMethodTypes = [
+  "STORE_BALANCE",
   "CARD",
   "APPLE_PAY",
   "GOOGLE_PAY",
   "PAYPAL",
+  "CARRIER_BILLING",
   "ACH_DEBIT",
   "SEPA_DEBIT",
   "IDEAL",
@@ -12,6 +14,24 @@ export const paymentMethodTypes = [
   "SOFORT",
   "ALIPAY",
   "WECHAT_PAY",
+  "DOUYIN_PAY",
+  "UPI",
+  "EPS_TOPUP",
+  "NET_BANKING_TOPUP",
+  "MERPAY",
+  "PAYPAY",
+  "KAKAOPAY",
+  "NAVER_PAY",
+  "PAYCO",
+  "TOSS_PAY",
+  "MOMO",
+  "SHOPEEPAY",
+  "VNPAY",
+  "ZALOPAY",
+  "DANA",
+  "GOPAY",
+  "GCASH",
+  "TRUEMONEY",
 ] as const;
 export const productTypes = [
   "PAID_APP",
@@ -47,6 +67,8 @@ export type StorefrontRegionPolicy = {
   languageCode: string;
   taxMode: TaxMode;
   consumerContractVersions: Record<CommerceLane, string>;
+  appleParityPaymentMethods: PaymentMethodType[];
+  topUpOnlyPaymentMethods?: PaymentMethodType[];
 };
 
 export type MerchantEntity = {
@@ -99,8 +121,17 @@ export type CheckoutQuote = {
   consumerContractVersion: string;
   developerContractVersion: string;
   paymentMethods: PaymentMethodType[];
+  parityTargetPaymentMethods: PaymentMethodType[];
+  parityGapPaymentMethods: PaymentMethodType[];
   suppressedPaymentMethods: PaymentMethodType[];
   warnings: string[];
+};
+
+type RouteCandidate = {
+  route: PspRoute;
+  recurringEligibleMethods: PaymentMethodType[];
+  platformEligibleMethods: PaymentMethodType[];
+  eligibleMethods: PaymentMethodType[];
 };
 
 type CommercePolicyErrorCode =
@@ -144,6 +175,7 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "us-marketplace-v1",
         MERCHANT_OF_RECORD: "us-mor-v1",
       },
+      appleParityPaymentMethods: ["STORE_BALANCE", "APPLE_PAY", "CARD", "PAYPAL"],
     },
     {
       countryCode: "CA",
@@ -154,6 +186,24 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "ca-marketplace-v1",
         MERCHANT_OF_RECORD: "ca-mor-v1",
       },
+      appleParityPaymentMethods: ["STORE_BALANCE", "APPLE_PAY", "CARD", "PAYPAL"],
+    },
+    {
+      countryCode: "GB",
+      currencyCode: "GBP",
+      languageCode: "en-GB",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "gb-marketplace-v1",
+        MERCHANT_OF_RECORD: "gb-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAL",
+      ],
     },
     {
       countryCode: "AU",
@@ -164,6 +214,29 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "au-marketplace-v1",
         MERCHANT_OF_RECORD: "au-mor-v1",
       },
+      appleParityPaymentMethods: ["STORE_BALANCE", "APPLE_PAY", "CARD", "PAYPAL"],
+    },
+    {
+      countryCode: "NZ",
+      currencyCode: "NZD",
+      languageCode: "en-NZ",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "nz-marketplace-v1",
+        MERCHANT_OF_RECORD: "nz-mor-v1",
+      },
+      appleParityPaymentMethods: ["STORE_BALANCE", "CARD"],
+    },
+    {
+      countryCode: "IS",
+      currencyCode: "ISK",
+      languageCode: "is-IS",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "is-marketplace-v1",
+        MERCHANT_OF_RECORD: "is-mor-v1",
+      },
+      appleParityPaymentMethods: ["APPLE_PAY", "CARD"],
     },
     {
       countryCode: "DE",
@@ -174,6 +247,13 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "de-marketplace-v1",
         MERCHANT_OF_RECORD: "de-mor-v1",
       },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAL",
+      ],
     },
     {
       countryCode: "FR",
@@ -184,6 +264,50 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "fr-marketplace-v1",
         MERCHANT_OF_RECORD: "fr-mor-v1",
       },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAL",
+      ],
+    },
+    {
+      countryCode: "AT",
+      currencyCode: "EUR",
+      languageCode: "de-AT",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "at-marketplace-v1",
+        MERCHANT_OF_RECORD: "at-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "EPS_TOPUP",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAL",
+      ],
+      topUpOnlyPaymentMethods: ["EPS_TOPUP"],
+    },
+    {
+      countryCode: "BE",
+      currencyCode: "EUR",
+      languageCode: "nl-BE",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "be-marketplace-v1",
+        MERCHANT_OF_RECORD: "be-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "BANCONTACT",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAL",
+      ],
     },
     {
       countryCode: "JP",
@@ -194,6 +318,14 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "jp-marketplace-v1",
         MERCHANT_OF_RECORD: "jp-mor-v1",
       },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "MERPAY",
+        "CARRIER_BILLING",
+        "CARD",
+        "PAYPAY",
+      ],
     },
     {
       countryCode: "KR",
@@ -204,6 +336,152 @@ export const defaultContractRegistry: ContractRegistry = {
         MARKETPLACE: "kr-marketplace-v1",
         MERCHANT_OF_RECORD: "kr-mor-v1",
       },
+      appleParityPaymentMethods: [
+        "KAKAOPAY",
+        "CARRIER_BILLING",
+        "CARD",
+        "NAVER_PAY",
+        "PAYCO",
+        "TOSS_PAY",
+      ],
+    },
+    {
+      countryCode: "CN",
+      currencyCode: "CNY",
+      languageCode: "zh-CN",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "cn-marketplace-v1",
+        MERCHANT_OF_RECORD: "cn-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "ALIPAY",
+        "STORE_BALANCE",
+        "DOUYIN_PAY",
+        "CARD",
+        "WECHAT_PAY",
+      ],
+    },
+    {
+      countryCode: "IN",
+      currencyCode: "INR",
+      languageCode: "en-IN",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "in-marketplace-v1",
+        MERCHANT_OF_RECORD: "in-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "NET_BANKING_TOPUP",
+        "UPI",
+      ],
+      topUpOnlyPaymentMethods: ["NET_BANKING_TOPUP"],
+    },
+    {
+      countryCode: "AE",
+      currencyCode: "AED",
+      languageCode: "en-AE",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "ae-marketplace-v1",
+        MERCHANT_OF_RECORD: "ae-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "APPLE_PAY",
+        "CARRIER_BILLING",
+        "CARD",
+      ],
+    },
+    {
+      countryCode: "SA",
+      currencyCode: "SAR",
+      languageCode: "ar-SA",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "sa-marketplace-v1",
+        MERCHANT_OF_RECORD: "sa-mor-v1",
+      },
+      appleParityPaymentMethods: ["STORE_BALANCE", "CARRIER_BILLING", "CARD"],
+    },
+    {
+      countryCode: "VN",
+      currencyCode: "VND",
+      languageCode: "vi-VN",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "vn-marketplace-v1",
+        MERCHANT_OF_RECORD: "vn-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "MOMO",
+        "CARD",
+        "SHOPEEPAY",
+        "VNPAY",
+        "ZALOPAY",
+      ],
+    },
+    {
+      countryCode: "TH",
+      currencyCode: "THB",
+      languageCode: "th-TH",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "th-marketplace-v1",
+        MERCHANT_OF_RECORD: "th-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "CARRIER_BILLING",
+        "CARD",
+        "SHOPEEPAY",
+        "TRUEMONEY",
+      ],
+    },
+    {
+      countryCode: "ID",
+      currencyCode: "IDR",
+      languageCode: "id-ID",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "id-marketplace-v1",
+        MERCHANT_OF_RECORD: "id-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "STORE_BALANCE",
+        "DANA",
+        "GOPAY",
+        "CARD",
+        "SHOPEEPAY",
+      ],
+    },
+    {
+      countryCode: "PH",
+      currencyCode: "PHP",
+      languageCode: "en-PH",
+      taxMode: "PSP_NATIVE",
+      consumerContractVersions: {
+        MARKETPLACE: "ph-marketplace-v1",
+        MERCHANT_OF_RECORD: "ph-mor-v1",
+      },
+      appleParityPaymentMethods: [
+        "GCASH",
+        "CARRIER_BILLING",
+        "CARD",
+        "SHOPEEPAY",
+      ],
+    },
+    {
+      countryCode: "RU",
+      currencyCode: "RUB",
+      languageCode: "ru-RU",
+      taxMode: "MANUAL",
+      consumerContractVersions: {
+        MARKETPLACE: "ru-marketplace-v1",
+        MERCHANT_OF_RECORD: "ru-mor-v1",
+      },
+      appleParityPaymentMethods: ["STORE_BALANCE", "CARRIER_BILLING"],
     },
   ],
   merchantAccounts: [
@@ -232,7 +510,7 @@ export const defaultContractRegistry: ContractRegistry = {
       entityCode: "OPENSTORE_US",
       provider: "ADYEN",
       lane: "MARKETPLACE",
-      displayName: "OpenStore Marketplace APAC",
+      displayName: "OpenStore Marketplace Global",
       settlementCurrencyCode: "USD",
       settlementCountryCode: "US",
       allowsRecurring: true,
@@ -255,11 +533,16 @@ export const defaultContractRegistry: ContractRegistry = {
       merchantAccountKey: "stripe-us-marketplace",
       provider: "STRIPE",
       lane: "MARKETPLACE",
-      supportedCountries: ["US", "CA", "AU", "JP", "KR"],
-      supportedCurrencies: ["USD", "CAD", "AUD", "JPY", "KRW"],
+      supportedCountries: ["US", "CA", "AU"],
+      supportedCurrencies: ["USD", "CAD", "AUD"],
       priority: 10,
-      paymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY"],
-      recurringPaymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY"],
+      paymentMethods: ["STORE_BALANCE", "CARD", "APPLE_PAY", "GOOGLE_PAY"],
+      recurringPaymentMethods: [
+        "STORE_BALANCE",
+        "CARD",
+        "APPLE_PAY",
+        "GOOGLE_PAY",
+      ],
       supportedProductTypes: [
         "PAID_APP",
         "CONSUMABLE_IAP",
@@ -273,10 +556,11 @@ export const defaultContractRegistry: ContractRegistry = {
       merchantAccountKey: "stripe-eu-marketplace",
       provider: "STRIPE",
       lane: "MARKETPLACE",
-      supportedCountries: ["DE", "FR"],
-      supportedCurrencies: ["EUR"],
+      supportedCountries: ["DE", "FR", "AT", "BE", "IS"],
+      supportedCurrencies: ["EUR", "ISK"],
       priority: 10,
       paymentMethods: [
+        "STORE_BALANCE",
         "CARD",
         "APPLE_PAY",
         "GOOGLE_PAY",
@@ -285,7 +569,13 @@ export const defaultContractRegistry: ContractRegistry = {
         "BANCONTACT",
         "SOFORT",
       ],
-      recurringPaymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY", "SEPA_DEBIT"],
+      recurringPaymentMethods: [
+        "STORE_BALANCE",
+        "CARD",
+        "APPLE_PAY",
+        "GOOGLE_PAY",
+        "SEPA_DEBIT",
+      ],
       supportedProductTypes: [
         "PAID_APP",
         "CONSUMABLE_IAP",
@@ -299,18 +589,68 @@ export const defaultContractRegistry: ContractRegistry = {
       merchantAccountKey: "adyen-apac-marketplace",
       provider: "ADYEN",
       lane: "MARKETPLACE",
-      supportedCountries: ["JP", "KR"],
-      supportedCurrencies: ["JPY", "KRW", "USD"],
+      supportedCountries: [
+        "US",
+        "CA",
+        "GB",
+        "AU",
+        "NZ",
+        "IS",
+        "DE",
+        "FR",
+        "AT",
+        "BE",
+        "JP",
+        "KR",
+        "CN",
+        "IN",
+        "AE",
+        "SA",
+        "VN",
+        "TH",
+        "ID",
+        "PH",
+        "RU",
+      ],
+      supportedCurrencies: [
+        "USD",
+        "CAD",
+        "GBP",
+        "AUD",
+        "NZD",
+        "ISK",
+        "EUR",
+        "JPY",
+        "KRW",
+        "CNY",
+        "INR",
+        "AED",
+        "SAR",
+        "VND",
+        "THB",
+        "IDR",
+        "PHP",
+        "RUB",
+      ],
       priority: 20,
       paymentMethods: [
+        "STORE_BALANCE",
         "CARD",
         "APPLE_PAY",
         "GOOGLE_PAY",
         "PAYPAL",
         "ALIPAY",
         "WECHAT_PAY",
+        "UPI",
+        "BANCONTACT",
       ],
-      recurringPaymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY"],
+      recurringPaymentMethods: [
+        "STORE_BALANCE",
+        "CARD",
+        "APPLE_PAY",
+        "GOOGLE_PAY",
+        "PAYPAL",
+      ],
       supportedProductTypes: [
         "PAID_APP",
         "CONSUMABLE_IAP",
@@ -324,11 +664,52 @@ export const defaultContractRegistry: ContractRegistry = {
       merchantAccountKey: "paddle-global-mor",
       provider: "PADDLE",
       lane: "MERCHANT_OF_RECORD",
-      supportedCountries: ["US", "CA", "AU", "DE", "FR", "JP", "KR"],
-      supportedCurrencies: ["USD", "CAD", "AUD", "EUR", "JPY", "KRW"],
+      supportedCountries: [
+        "US",
+        "CA",
+        "GB",
+        "AU",
+        "NZ",
+        "IS",
+        "DE",
+        "FR",
+        "AT",
+        "BE",
+        "JP",
+        "KR",
+        "IN",
+        "AE",
+        "SA",
+      ],
+      supportedCurrencies: [
+        "USD",
+        "CAD",
+        "GBP",
+        "AUD",
+        "NZD",
+        "ISK",
+        "EUR",
+        "JPY",
+        "KRW",
+        "INR",
+        "AED",
+        "SAR",
+      ],
       priority: 10,
-      paymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY", "PAYPAL"],
-      recurringPaymentMethods: ["CARD", "APPLE_PAY", "GOOGLE_PAY", "PAYPAL"],
+      paymentMethods: [
+        "STORE_BALANCE",
+        "CARD",
+        "APPLE_PAY",
+        "GOOGLE_PAY",
+        "PAYPAL",
+      ],
+      recurringPaymentMethods: [
+        "STORE_BALANCE",
+        "CARD",
+        "APPLE_PAY",
+        "GOOGLE_PAY",
+        "PAYPAL",
+      ],
       supportedProductTypes: [
         "PAID_APP",
         "CONSUMABLE_IAP",
@@ -374,18 +755,22 @@ function getAccount(accountKey: string, registry: ContractRegistry) {
 }
 
 function sortRoutes(
-  routes: PspRoute[],
+  candidates: RouteCandidate[],
   preferredProvider?: PaymentProvider,
-): PspRoute[] {
-  return [...routes].sort((left, right) => {
-    const leftPreferred = left.provider === preferredProvider ? -1 : 0;
-    const rightPreferred = right.provider === preferredProvider ? -1 : 0;
+): RouteCandidate[] {
+  return [...candidates].sort((left, right) => {
+    const leftPreferred = left.route.provider === preferredProvider ? -1 : 0;
+    const rightPreferred = right.route.provider === preferredProvider ? -1 : 0;
 
     if (leftPreferred !== rightPreferred) {
       return leftPreferred - rightPreferred;
     }
 
-    return left.priority - right.priority;
+    if (left.eligibleMethods.length !== right.eligibleMethods.length) {
+      return right.eligibleMethods.length - left.eligibleMethods.length;
+    }
+
+    return left.route.priority - right.route.priority;
   });
 }
 
@@ -411,25 +796,65 @@ function filterMethodsForPlatform(
   }
 }
 
+function getAppleParityTargetMethods(
+  region: StorefrontRegionPolicy,
+  platform: CheckoutPlatform,
+) {
+  const parityMethods = region.appleParityPaymentMethods.filter(
+    (method) => !region.topUpOnlyPaymentMethods?.includes(method),
+  );
+
+  return filterMethodsForPlatform(parityMethods, platform);
+}
+
+function orderPaymentMethods(
+  methods: PaymentMethodType[],
+  orderedBy: PaymentMethodType[],
+) {
+  return orderedBy.filter((method) => methods.includes(method));
+}
+
 function selectRouteForLane(
   lane: CommerceLane,
   input: CheckoutQuoteInput,
   registry: ContractRegistry,
+  region: StorefrontRegionPolicy,
 ) {
-  const candidates = registry.routes.filter(
-    (route) => route.lane === lane && routeSupports(route, input),
-  );
+  const targetPaymentMethods = getAppleParityTargetMethods(region, input.platform);
+  const candidates = registry.routes
+    .filter((route) => route.lane === lane && routeSupports(route, input))
+    .map((route) => {
+      const recurringEligibleMethods = getEligiblePaymentMethods(
+        route,
+        input.productType,
+      );
+      const platformEligibleMethods = filterMethodsForPlatform(
+        recurringEligibleMethods,
+        input.platform,
+      );
+      const eligibleMethods = orderPaymentMethods(
+        platformEligibleMethods.filter((method) =>
+          targetPaymentMethods.includes(method),
+        ),
+        targetPaymentMethods,
+      );
 
-  for (const route of sortRoutes(candidates, input.preferredProvider)) {
-    const account = getAccount(route.merchantAccountKey, registry);
-    const recurringEligibleMethods = getEligiblePaymentMethods(
+      return {
+        route,
+        recurringEligibleMethods,
+        platformEligibleMethods,
+        eligibleMethods,
+      };
+    });
+
+  for (const candidate of sortRoutes(candidates, input.preferredProvider)) {
+    const {
       route,
-      input.productType,
-    );
-    const eligibleMethods = filterMethodsForPlatform(
       recurringEligibleMethods,
-      input.platform,
-    );
+      platformEligibleMethods,
+      eligibleMethods,
+    } = candidate;
+    const account = getAccount(route.merchantAccountKey, registry);
 
     if (!account || eligibleMethods.length === 0) {
       continue;
@@ -439,11 +864,18 @@ function selectRouteForLane(
       route,
       account,
       eligibleMethods,
+      parityTargetPaymentMethods: targetPaymentMethods,
+      parityGapPaymentMethods: targetPaymentMethods.filter(
+        (method) => !platformEligibleMethods.includes(method),
+      ),
       recurringSuppressedMethods: route.paymentMethods.filter(
         (method) => !recurringEligibleMethods.includes(method),
       ),
       platformSuppressedMethods: recurringEligibleMethods.filter(
-        (method) => !eligibleMethods.includes(method),
+        (method) => !platformEligibleMethods.includes(method),
+      ),
+      countrySuppressedMethods: platformEligibleMethods.filter(
+        (method) => !targetPaymentMethods.includes(method),
       ),
     };
   }
@@ -468,12 +900,12 @@ export function resolveCheckoutQuote(
 
   const warnings: string[] = [];
   const desiredLane = resolveDesiredLane(input);
-  let selection = selectRouteForLane(desiredLane, input, registry);
+  let selection = selectRouteForLane(desiredLane, input, registry, region);
   let lane = desiredLane;
 
   if (!selection && desiredLane === "MERCHANT_OF_RECORD") {
     lane = "MARKETPLACE";
-    selection = selectRouteForLane(lane, input, registry);
+    selection = selectRouteForLane(lane, input, registry, region);
     warnings.push(
       "Merchant-of-record routing was requested but no eligible route was configured, so OpenStore fell back to the marketplace lane.",
     );
@@ -494,8 +926,11 @@ export function resolveCheckoutQuote(
     route,
     account,
     eligibleMethods,
+    parityTargetPaymentMethods,
+    parityGapPaymentMethods,
     recurringSuppressedMethods,
     platformSuppressedMethods,
+    countrySuppressedMethods,
   } = selection;
   const suppressedPaymentMethods = route.paymentMethods.filter(
     (method) => !eligibleMethods.includes(method),
@@ -513,6 +948,18 @@ export function resolveCheckoutQuote(
   if (platformSuppressedMethods.length) {
     warnings.push(
       `Platform filtering removed unsupported payment methods for ${input.platform}: ${platformSuppressedMethods.join(", ")}.`,
+    );
+  }
+
+  if (countrySuppressedMethods.length) {
+    warnings.push(
+      `Apple parity policy suppressed methods not listed for ${countryCode}: ${countrySuppressedMethods.join(", ")}.`,
+    );
+  }
+
+  if (parityGapPaymentMethods.length) {
+    warnings.push(
+      `Current routing does not yet cover Apple parity methods for ${countryCode}: ${parityGapPaymentMethods.join(", ")}.`,
     );
   }
 
@@ -540,6 +987,8 @@ export function resolveCheckoutQuote(
         ? registry.defaultDeveloperContractVersion
         : "openstore-first-party-v1",
     paymentMethods: eligibleMethods,
+    parityTargetPaymentMethods,
+    parityGapPaymentMethods,
     suppressedPaymentMethods,
     warnings,
   };
