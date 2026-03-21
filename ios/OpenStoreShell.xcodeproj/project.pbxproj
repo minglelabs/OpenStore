@@ -160,6 +160,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OPENSTORE_BASE_URL = "https://openstore.example.invalid/today";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = YES;
@@ -225,6 +226,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OPENSTORE_BASE_URL = "https://openstore.example.invalid/today";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = YES;
@@ -251,6 +253,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				"OPENSTORE_BASE_URL[sdk=iphonesimulator*]" = "http://localhost:3000/today";
 				PRODUCT_BUNDLE_IDENTIFIER = com.minglelabs.openstore.shell;
 				PRODUCT_NAME = OpenStore;
 				SDKROOT = iphoneos;
@@ -274,6 +277,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				"OPENSTORE_BASE_URL[sdk=iphonesimulator*]" = "http://localhost:3000/today";
 				PRODUCT_BUNDLE_IDENTIFIER = com.minglelabs.openstore.shell;
 				PRODUCT_NAME = OpenStore;
 				SDKROOT = iphoneos;

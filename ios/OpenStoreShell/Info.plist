@@ -38,7 +38,7 @@
 		</dict>
 	</dict>
 	<key>OpenStoreBaseURL</key>
-	<string>http://localhost:3000/today</string>
+	<string>$(OPENSTORE_BASE_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
