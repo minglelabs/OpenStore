@@ -14,14 +14,14 @@ export function SectionHeading({
   action?: string;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-1">
         {eyebrow ? (
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--ink-soft)]">
             {eyebrow}
           </p>
         ) : null}
-        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink-strong)]">
+        <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--ink-strong)] md:text-3xl">
           {title}
         </h2>
         {description ? (
