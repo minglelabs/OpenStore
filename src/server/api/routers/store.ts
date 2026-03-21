@@ -11,34 +11,20 @@ import {
   getCheckoutMarkets,
   getAccountSnapshotService,
   getAppBySlugService,
-  getAppDetailSections,
-  getCatalogSummary,
-  getCategoryBySlugService,
-  getChartsSnapshot,
-  getCollectionBySlugService,
   getDeveloperConsoleSnapshot,
   getDeveloperBySlugService,
-  getDeveloperCatalog,
   getDeviceList,
-  getDiscoverFeedSnapshot,
   getHiddenPurchases,
   getLibrarySnapshotService,
   getNotificationSettings,
   getOperationsDashboard,
   getPurchaseHistory,
   getRecentSearches,
-  getSearchSnapshot,
-  getSearchSuggestions,
   getSecurityControls,
   getSubscriptionApps,
-  getTodayFeedSnapshot,
   getTrendingSearches,
   hidePurchase,
   listCheckoutOrders,
-  listApps,
-  listCategories,
-  listCollections,
-  listDevelopers,
   pauseDownload,
   queueInstall,
   recordRecentSearch,
@@ -57,6 +43,24 @@ import {
   updateReview,
   getBillingDetails,
 } from "@/lib/store-service";
+import {
+  getAppBySlugService as getCatalogAppBySlugService,
+  getAppDetailSections as getCatalogAppDetailSections,
+  getCatalogSummary,
+  getCategoryBySlugService as getCatalogCategoryBySlugService,
+  getChartsSnapshot,
+  getCollectionBySlugService as getCatalogCollectionBySlugService,
+  getDeveloperBySlugService as getCatalogDeveloperBySlugService,
+  getDeveloperCatalog,
+  getDiscoverFeedSnapshot,
+  getSearchSnapshot,
+  getSearchSuggestions,
+  getTodayFeedSnapshot,
+  listApps,
+  listCategories,
+  listCollections,
+  listDevelopers,
+} from "@/lib/store-catalog-db";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import { checkoutPlatforms, paymentMethodTypes } from "@/server/commerce/contracts/registry";
 
@@ -85,6 +89,16 @@ function requireApp(slug: string) {
   return app;
 }
 
+async function requireCatalogApp(slug: string) {
+  const app = await getCatalogAppBySlugService(slug);
+
+  if (!app) {
+    notFoundError("App", slug);
+  }
+
+  return app;
+}
+
 function requireDeveloper(slug: string) {
   const developer = getDeveloperBySlugService(slug);
 
@@ -95,8 +109,18 @@ function requireDeveloper(slug: string) {
   return developer;
 }
 
-function requireCollection(slug: string) {
-  const collection = getCollectionBySlugService(slug);
+async function requireCatalogDeveloper(slug: string) {
+  const developer = await getCatalogDeveloperBySlugService(slug);
+
+  if (!developer) {
+    notFoundError("Developer", slug);
+  }
+
+  return developer;
+}
+
+async function requireCatalogCollection(slug: string) {
+  const collection = await getCatalogCollectionBySlugService(slug);
 
   if (!collection) {
     notFoundError("Collection", slug);
@@ -105,8 +129,8 @@ function requireCollection(slug: string) {
   return collection;
 }
 
-function requireCategory(slug: string) {
-  const category = getCategoryBySlugService(slug);
+async function requireCatalogCategory(slug: string) {
+  const category = await getCatalogCategoryBySlugService(slug);
 
   if (!category) {
     notFoundError("Category", slug);
@@ -115,10 +139,8 @@ function requireCategory(slug: string) {
   return category;
 }
 
-function requireAppDetailSections(
-  slug: string,
-): NonNullable<ReturnType<typeof getAppDetailSections>> {
-  const sections = getAppDetailSections(slug);
+async function requireCatalogAppDetailSections(slug: string) {
+  const sections = await getCatalogAppDetailSections(slug);
 
   if (!sections) {
     notFoundError("App", slug);
@@ -235,47 +257,47 @@ const catalogRouter = createTRPCRouter({
 });
 
 const todayFeedRouter = createTRPCRouter({
-  hero: publicProcedure.query(() => getTodayFeedSnapshot().hero),
-  spotlightApps: publicProcedure.query(() => getTodayFeedSnapshot().spotlightApps),
-  collections: publicProcedure.query(() => getTodayFeedSnapshot().collections),
-  releaseRadar: publicProcedure.query(() => getTodayFeedSnapshot().releaseRadar),
-  safetyNotes: publicProcedure.query(() => getTodayFeedSnapshot().safetyNotes),
+  hero: publicProcedure.query(async () => (await getTodayFeedSnapshot()).hero),
+  spotlightApps: publicProcedure.query(async () => (await getTodayFeedSnapshot()).spotlightApps),
+  collections: publicProcedure.query(async () => (await getTodayFeedSnapshot()).collections),
+  releaseRadar: publicProcedure.query(async () => (await getTodayFeedSnapshot()).releaseRadar),
+  safetyNotes: publicProcedure.query(async () => (await getTodayFeedSnapshot()).safetyNotes),
 });
 
 const discoverFeedRouter = createTRPCRouter({
-  categories: publicProcedure.query(() => getDiscoverFeedSnapshot().categories),
-  collections: publicProcedure.query(() => getDiscoverFeedSnapshot().collections),
+  categories: publicProcedure.query(async () => (await getDiscoverFeedSnapshot()).categories),
+  collections: publicProcedure.query(async () => (await getDiscoverFeedSnapshot()).collections),
   featuredDevelopers: publicProcedure.query(
-    () => getDiscoverFeedSnapshot().featuredDevelopers,
+    async () => (await getDiscoverFeedSnapshot()).featuredDevelopers,
   ),
-  hiddenGems: publicProcedure.query(() => getDiscoverFeedSnapshot().hiddenGems),
-  principles: publicProcedure.query(() => getDiscoverFeedSnapshot().principles),
+  hiddenGems: publicProcedure.query(async () => (await getDiscoverFeedSnapshot()).hiddenGems),
+  principles: publicProcedure.query(async () => (await getDiscoverFeedSnapshot()).principles),
 });
 
 const appDetailRouter = createTRPCRouter({
   sections: publicProcedure
     .input(appSlugSchema)
-    .query(({ input }) => requireAppDetailSections(input.slug)),
-  screenshots: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).screenshots;
+    .query(({ input }) => requireCatalogAppDetailSections(input.slug)),
+  screenshots: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).screenshots;
   }),
-  highlights: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).highlights;
+  highlights: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).highlights;
   }),
-  whatsNew: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).whatsNew;
+  whatsNew: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).whatsNew;
   }),
-  features: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).features;
+  features: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).features;
   }),
-  privacy: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).privacy;
+  privacy: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).privacy;
   }),
-  reviews: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireAppDetailSections(input.slug).reviews;
+  reviews: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    return (await requireCatalogAppDetailSections(input.slug)).reviews;
   }),
-  related: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    const sections = requireAppDetailSections(input.slug);
+  related: publicProcedure.input(appSlugSchema).query(async ({ input }) => {
+    const sections = await requireCatalogAppDetailSections(input.slug);
 
     return {
       relatedApps: sections.relatedApps,
@@ -434,21 +456,21 @@ export const storeRouter = createTRPCRouter({
   library: publicProcedure.query(() => getLibrarySnapshotService()),
   account: publicProcedure.query(() => getAccountSnapshotService()),
   appBySlug: publicProcedure.input(appSlugSchema).query(({ input }) => {
-    return requireApp(input.slug);
+    return requireCatalogApp(input.slug);
   }),
   developerBySlug: publicProcedure.input(developerSlugSchema).query(({ input }) => {
-    return requireDeveloper(input.slug);
+    return requireCatalogDeveloper(input.slug);
   }),
   collectionBySlug: publicProcedure
     .input(collectionSlugSchema)
-    .query(({ input }) => requireCollection(input.slug)),
+    .query(({ input }) => requireCatalogCollection(input.slug)),
   categoryBySlug: publicProcedure.input(categorySlugSchema).query(({ input }) => {
-    return requireCategory(input.slug);
+    return requireCatalogCategory(input.slug);
   }),
   developerCatalog: publicProcedure
     .input(developerSlugSchema)
-    .query(({ input }) => {
-      const developer = getDeveloperCatalog(input.slug);
+    .query(async ({ input }) => {
+      const developer = await getDeveloperCatalog(input.slug);
 
       if (!developer) {
         notFoundError("Developer", input.slug);
