@@ -19,6 +19,8 @@
 
 # production
 /build
+/ios/build
+/ios/build-maccatalyst
 
 # misc
 .DS_Store

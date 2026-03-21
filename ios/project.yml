@@ -1,0 +1,38 @@
+name: OpenStoreShell
+
+options:
+  bundleIdPrefix: com.minglelabs
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SUPPORTS_MACCATALYST: YES
+    OPENSTORE_BASE_URL: https://openstore.example.invalid/today
+
+targets:
+  OpenStoreShell:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: OpenStoreShell
+    settings:
+      base:
+        PRODUCT_NAME: OpenStore
+        PRODUCT_BUNDLE_IDENTIFIER: com.minglelabs.openstore.shell
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OpenStoreShell/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        "OPENSTORE_BASE_URL[sdk=iphonesimulator*]": http://localhost:3000/today
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/Frameworks"
+    scheme:
+      testTargets: []
